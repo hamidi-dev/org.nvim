@@ -3124,9 +3124,13 @@ The target is resolved when the capture starts, like Emacs: missing
 file+headline headlines and date tree nodes are created then, and the
 location is remembered even if the file changes (or the clock moves to
 another task) while you type. When the target is gone at the end (its
-headline was deleted), nothing is lost: the capture buffer stays open.
-With `unnarrowed`, the text is inserted into the target right away and
-the capture window shows the whole target file (see |org-capture-unnarrowed|).
+headline was deleted), nothing is lost: the capture stays open.
+Like Emacs, the expanded template goes into the target buffer right away
+and is edited there, in a capture window that shows only the new entry
+(|org-capture-in-place|); with `unnarrowed`, the capture window shows the
+whole target file (see |org-capture-unnarrowed|). `capture.in_place =
+false` edits the text in a separate capture buffer instead, stored at the
+target when the capture is finished.
 
 Capture dates follow `extend_today_until` like Emacs: before that hour,
 %t %T %u %U and %<...> use 23:59 of the previous day and the date tree
@@ -3217,7 +3221,8 @@ Template fields:
   allow_empty        finishing with no text still saves the target (by
                      default an empty capture is refused)
   hook               function(capture_bufnr) run when the capture window
-                     opens (not with immediate_finish)
+                     opens (not with immediate_finish); in place, the
+                     target buffer
   prepare_finalize   function(capture_bufnr), before the text is read
   before_finalize    function(bufnr, lnum) in the target, before saving
   after_finalize     function(bufnr, lnum) when the capture is done
@@ -3295,8 +3300,8 @@ of your Emacs session exists there, and it cannot prompt: no
 interpreter knows but that compiles as Lua is a Lua expression (the older
 org.nvim syntax); Lisp is tried when the Lua fails.
 
-Capture window: `<C-c><C-c>` or `:w` finalizes (with a count, C-u C-c C-c,
-it then jumps to the entry), `<C-c><C-k>` aborts (unchanged text created
+Capture window: `<C-c><C-c>` finalizes (with a count, C-u C-c C-c, it
+then jumps to the entry; in a separate capture buffer, `:w` does too), `<C-c><C-k>` aborts (unchanged text created
 for the target is dropped, preserving unrelated edits and generated
 headings with user-added content) and `<C-c><C-w>` finalizes and
 refiles the entry (entry templates only; also `<prefix>w`, `<prefix>k`,
@@ -3310,6 +3315,26 @@ mode as usual). The window splits the screen like Emacs (`capture.window`:
 If saving the target fails, the capture stays open and can be retried
 without inserting a duplicate entry. Clock/bookmark finalization waits
 until the captured text is stored.
+
+                                                    *org-capture-in-place*
+By default (`capture.in_place = true`) a capture inserts the expanded
+template into the target buffer when it starts, like Emacs, and the
+capture window shows that buffer with everything but the new entry
+hidden, like Emacs's capture buffer narrowed to the inserted text: other
+windows showing the file see the entry appear and grow as you type. The
+cursor stays inside the entry, and lines added at its end (`o` on its
+last line) belong to it. `<C-c><C-c>` saves the file, `<C-c><C-k>`
+removes exactly the lines the capture inserted (as edited since) and
+the headlines created for it, keeping other edits, and gives the buffer
+back its modified state; `<C-c><C-w>` finalizes and refiles. `:w` just
+writes the file, with the entry in it. All template types, date trees,
+`prepend`, `kill_buffer` and `clock_in` work as with a capture buffer;
+`immediate_finish` opens no window either way. A second capture into a
+file that a capture is editing in place gets a separate capture buffer.
+Hiding the rest of the file needs `conceal_lines` and window-scoped
+namespaces (Neovim 0.11+); without them the window shows the whole file,
+as with `unnarrowed`. Closing the capture window ends the capture and
+leaves the text in the (unsaved) buffer.
 
                                                     *org-capture-unnarrowed*
 An `unnarrowed` capture inserts the expanded template into the target
@@ -7509,8 +7534,9 @@ agenda ~
 capture ~
   templates {} (|org-capture-templates|; empty = Emacs's "t" Task
   template), templates_contexts {} (|org-capture-contexts|),
-  window "split", use_agenda_date false (the global capture key in the
-  agenda uses the date at point, like the agenda's `K`)
+  window "split", in_place true (|org-capture-in-place|),
+  use_agenda_date false (the global capture key in the agenda uses the
+  date at point, like the agenda's `K`)
 refile ~
   targets {} (empty = level-1 headlines of the current buffer),
   max_level nil, include_current_file nil, use_outline_path false,
@@ -8923,12 +8949,15 @@ Differences from Emacs:
   visits every agenda file, so it updates them all, without saving).
 - Bulk action `f` and agenda skip functions take Lua instead of Elisp.
   Capture `%(sexp)` takes Emacs Lisp (see above) or a Lua expression.
-- Capture edits the text in a separate buffer that is stored at the target
-  (resolved when the capture starts) on finalize, instead of an indirect
-  buffer narrowed to the text already inserted in the target (Neovim has
-  no indirect buffers), so the target file does not show the new text
-  until the capture is finished. `unnarrowed` captures do insert the text
-  into the target right away (|org-capture-unnarrowed|). Mail and news `%:keyword` values (`%:from`,
+- Capture inserts the text into the target right away, like Emacs, but
+  Neovim has no indirect buffers nor narrowing: the capture window shows
+  the target buffer itself, with the lines outside the new entry hidden
+  (`conceal_lines` in that window only) and the cursor kept inside it
+  (|org-capture-in-place|). Undo in that window is the target buffer's
+  undo, and `:w` writes the file instead of finishing the capture. A
+  second capture into a file already being captured into in place uses a
+  separate capture buffer, which is what `capture.in_place = false` gives
+  every capture: the text is then stored at the target only on finalize. Mail and news `%:keyword` values (`%:from`,
   `%:subject`, ...) come from Emacs link sources (Gnus, mu4e, ...) that
   have no Neovim counterpart; only `%:link`, `%:description`,
   `%:annotation`, `%:initial` and `%:type` exist.

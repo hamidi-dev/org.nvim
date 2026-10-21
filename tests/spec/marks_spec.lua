@@ -358,7 +358,9 @@ describe("capture into an open, modified buffer", function()
     utils.writefile(p, { "* A", "* Inbox", "** Old" })
     vim.cmd("edit! " .. p)
     local tbuf = vim.api.nvim_get_current_buf()
+    config.opts.capture.in_place = false
     local cbuf = run(capture.capture, { target = p, headline = "Inbox", template = "* %?" })
+    config.opts.capture.in_place = true
     set(cbuf, 0, -1, { "* Captured" })
     -- the target buffer gets edits while the capture buffer is open
     set(tbuf, 1, 1, { "** under A", "** and more" })

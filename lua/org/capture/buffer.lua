@@ -162,7 +162,7 @@ end
 --- they act in the capture window and call the buffer's own mappings in
 --- other windows. `end_unnarrowed` restores those mappings.
 local function map_unnarrowed(s)
-  local bufnr = s.ctx.loc.bufnr
+  local bufnr = s.bufnr
   local maps = config.opts.mappings.capture or {}
   local actions = {
     {
@@ -239,11 +239,118 @@ local function start_insert(lines, cursor)
   end
 end
 
---- Start an unnarrowed capture (:unnarrowed): the text goes into the
---- target buffer right away, like Emacs, and the capture window shows the
---- whole target. Extmarks track the text and the lines its placement
---- changed, so abort restores exactly those.
-local function open_unnarrowed(tpl, text, ctx)
+---------------------------------------------------------------------------
+-- In-place captures: a window showing only the captured text
+---------------------------------------------------------------------------
+
+--- Whether this Neovim can hide lines in one window only: conceal_lines
+--- marks in a namespace scoped to that window.
+local function can_narrow()
+  return vim.api.nvim__ns_set ~= nil and require("org.fold").conceal_supported
+end
+
+--- Show only the captured text in the capture window, like Emacs's capture
+--- buffer narrowed to the inserted entry (org-capture-narrow). Neovim has
+--- no narrowing: the lines before and after the text are hidden by
+--- conceal_lines marks scoped to the capture window (other windows on the
+--- file show all of it), drawn again after every change, and the cursor
+--- is kept inside the text. `widen_window` ends it.
+local function narrow_window(s)
+  local bufnr, win = s.bufnr, s.win
+  if not can_narrow() then
+    return
+  end
+  local ns = vim.api.nvim_create_namespace("org.capture.narrow." .. win)
+  if not pcall(vim.api.nvim__ns_set, ns, { wins = { win } }) then
+    return
+  end
+  local group = vim.api.nvim_create_augroup("org.capture.narrow." .. win, { clear = true })
+  local n = { ns = ns, group = group, conceallevel = vim.wo[win].conceallevel }
+  s.narrow = n
+  if vim.wo[win].conceallevel == 0 then
+    vim.wo[win].conceallevel = 2
+  end
+  function n.refresh()
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+      return
+    end
+    vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+    local first, last = s.region:rows()
+    if not first then
+      -- the text is gone (undone): show the file
+      return
+    end
+    local count = vim.api.nvim_buf_line_count(bufnr)
+    if first > 1 then
+      pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, 0, 0, {
+        end_row = first - 2,
+        end_col = 0,
+        conceal_lines = "",
+        undo_restore = false,
+      })
+    end
+    if last < count then
+      pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, last, 0, {
+        end_row = count - 1,
+        end_col = 0,
+        conceal_lines = "",
+        undo_restore = false,
+      })
+    end
+  end
+  local function clamp()
+    if vim.api.nvim_get_current_win() ~= win then
+      return
+    end
+    local first, last = s.region:rows()
+    if not first then
+      return
+    end
+    local row = vim.api.nvim_win_get_cursor(win)[1]
+    if row < first then
+      pcall(vim.api.nvim_win_set_cursor, win, { first, 0 })
+    elseif row > last then
+      pcall(vim.api.nvim_win_set_cursor, win, { last, #(get_line(bufnr, last) or "") })
+    end
+  end
+  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "TextChangedP" }, {
+    group = group,
+    buffer = bufnr,
+    callback = n.refresh,
+  })
+  vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+    group = group,
+    buffer = bufnr,
+    callback = clamp,
+  })
+  n.refresh()
+end
+
+--- Show the whole file again in the capture window.
+local function widen_window(s)
+  local n = s.narrow
+  if not n then
+    return
+  end
+  s.narrow = nil
+  pcall(vim.api.nvim_del_augroup_by_id, n.group)
+  if vim.api.nvim_buf_is_valid(s.bufnr) then
+    vim.api.nvim_buf_clear_namespace(s.bufnr, n.ns, 0, -1)
+  end
+  if s.win and vim.api.nvim_win_is_valid(s.win) then
+    vim.wo[s.win].conceallevel = n.conceallevel
+  end
+end
+shared.widen_window = widen_window
+
+--- Start a capture in the target buffer: the text goes into the target
+--- right away, like Emacs. In place (capture.in_place) the capture window
+--- shows only that text, like Emacs's narrowed capture buffer; an
+--- unnarrowed capture (:unnarrowed) shows the whole target. Extmarks
+--- track the text and the lines its placement changed, so abort restores
+--- exactly those.
+---@param in_place? boolean
+local function open_unnarrowed(tpl, text, ctx, in_place)
   local loc = ctx.loc
   local bufnr = loc.bufnr
   local function fail(msg)
@@ -289,7 +396,9 @@ local function open_unnarrowed(tpl, text, ctx)
   local s = {
     template = tpl,
     ctx = ctx,
+    bufnr = bufnr,
     unnarrowed = true,
+    in_place = in_place or nil,
     change = { original = vim.list_slice(before, p + 1, #before - q), mark = span(p + 1, #after - q) },
     region = span(first, last),
     origin_buf = ctx.origin_buf or vim.api.nvim_get_current_buf(),
@@ -339,6 +448,9 @@ local function open_unnarrowed(tpl, text, ctx)
   pcall(vim.api.nvim_win_call, win, function()
     vim.cmd("silent! normal! zR")
   end)
+  if in_place then
+    narrow_window(s)
+  end
   pcall(vim.api.nvim_win_set_cursor, win, cursor or { first, 0 })
   run_hook(tpl.hook, bufnr)
   start_insert(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), cursor)
@@ -440,7 +552,7 @@ end
 --- position; with `opts.noninteractive` the other prompts take their
 --- default and a `time_prompt` date is now.
 ---@param opts? { initial?: string, date?: table, here?: boolean, date_prompt?: boolean, answers?: table<string|integer, any>, noninteractive?: boolean }
----@return integer|nil buf the capture buffer (or the target buffer with immediate_finish)
+---@return integer|nil buf the capture buffer: the target buffer in place, unnarrowed or with immediate_finish
 ---@return integer|nil # the capture window, or the line of the stored entry
 ---@return string|nil # with immediate_finish, the file of the stored entry (its buffer may be gone: kill_buffer)
 function M.capture(tpl_or_key, opts)
@@ -530,6 +642,12 @@ function M.capture(tpl_or_key, opts)
   end
   if tpl.unnarrowed then
     return open_unnarrowed(tpl, expanded, ctx)
+  end
+  -- in place, unless another capture is editing that buffer already (in
+  -- Emacs each one has its own indirect buffer): a capture buffer then
+  local in_place = (config.opts.capture or {}).in_place ~= false
+  if in_place and not M.sessions[loc.bufnr] and vim.bo[loc.bufnr].modifiable then
+    return open_unnarrowed(tpl, expanded, ctx, true)
   end
   return open_buffer(tpl, expanded, ctx)
 end
