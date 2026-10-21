@@ -8667,6 +8667,10 @@ Their targets are `{ bufnr = n, lnum = l }`.
   #+MACRO: name text $1                 a macro for export
 
 After editing a `#+` line, press <C-c><C-c> on it to refresh the buffer.
+An affiliated keyword (`#+NAME:`, `#+CAPTION:`, `#+ATTR_...:`, ...) belongs
+to the element below it, so there <C-c><C-c> acts on that element instead,
+like Emacs: it recalculates a table, runs a block or `#+CALL:`, updates a
+dynamic block or repairs a list.
 Like Emacs, this keeps the folds as they are: a new `#+STARTUP:` visibility
 applies with <C-u><C-u><Tab> (`16<Tab>`) or when the file is opened again
 (`:w`, then `:e`).
