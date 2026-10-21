@@ -47,3 +47,4 @@ lua/org/todo.lua
 lua/org/tags.lua
 lua/org/refile.lua
 lua/org/archive.lua
+lua/org/integrations

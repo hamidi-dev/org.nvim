@@ -146,6 +146,20 @@ local defaults = {
     --- "activate-checkboxes".
     features = { "context-menu", "yank-link", "activate-stars", "activate-bullets", "activate-checkboxes" },
   },
+
+  --- Plugins that expect a tree-sitter parser, given org.nvim's own
+  --- structure in org buffers when they are installed (see
+  --- `:h org-integrations`).
+  integrations = {
+    --- mini.ai: org text objects in `vim.b.miniai_config` of org buffers.
+    --- A table changes their letters ({ block = "o", emphasis = false }).
+    mini_ai = true,
+    --- snacks.nvim: `Snacks.scope` (indent guides, ii / ai, [i / ]i) from
+    --- org elements and subtrees.
+    snacks_scope = true,
+    --- flash.nvim: its tree-sitter jump labels org elements and subtrees.
+    flash = true,
+  },
 }
 
 return defaults

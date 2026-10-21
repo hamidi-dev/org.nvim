@@ -31,6 +31,7 @@ local M = {}
 ---@field children org.Element[]
 ---@field parent? org.Element
 ---@field greater? boolean
+---@field list_item? org.ListItem the list item of an `item`
 
 local GREATER_BLOCKS_EXCLUDED = { src = true, example = true, export = true, verse = true, comment = true }
 local AFFILIATED = {

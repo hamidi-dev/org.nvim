@@ -738,6 +738,9 @@
 ---@field feed? org.Config.Feed
 ---org-mouse: context menus, dragging subtrees, clickable stars.
 ---@field mouse? org.Config.Mouse
+---Plugins that expect a tree-sitter parser: mini.ai, snacks.nvim's
+---scopes, flash.nvim (`:h org-integrations`).
+---@field integrations? org.Config.Integrations
 ---Links: abbreviations, custom types, following.
 ---@field links? org.Config.Links
 ---Downloading remote resources (a URL in `#+INCLUDE`): `"prompt"`, `"safe"`,
@@ -956,6 +959,20 @@
 ---`"activate-stars"`, `"activate-bullets"`, `"activate-checkboxes"`.
 ---(Emacs `org-mouse-features`, default: all but `"move-tree"`)
 ---@field features? string[]
+
+---Plugins that expect a tree-sitter parser, given org.nvim's own structure
+---in org buffers when they are installed (`:h org-integrations`).
+---@class org.Config.Integrations
+---mini.ai: org text objects in `vim.b.miniai_config` of org buffers; a
+---table gives other letters (`{ block = "o", emphasis = false }`).
+---(default: `true`)
+---@field mini_ai? boolean|table<string, string|false>
+---snacks.nvim: `Snacks.scope` (its indent guides, `ii` / `ai`, `[i` / `]i`)
+---from org elements and subtrees. (default: `true`)
+---@field snacks_scope? boolean
+---flash.nvim: its tree-sitter jump labels org elements and subtrees.
+---(default: `true`)
+---@field flash? boolean
 
 ---Plain lists.
 ---@class org.Config.Lists

@@ -6697,6 +6697,78 @@ captures:
 Folding needs no helper: org.nvim folds org buffers itself (|org-folding|),
 and the `lsp` extension also answers `textDocument/foldingRange`.
 
+Text objects, scopes and jumps ~
+                                                    *org-integrations-ts*
+mini.ai, snacks.nvim's scopes and flash.nvim's tree-sitter jump ask
+tree-sitter for the nodes around the cursor. In org buffers they get
+org.nvim's structure instead: the headline subtrees, the elements around
+the cursor (|org-elements|: blocks, drawers, lists and items, tables,
+paragraphs, ...) and the links, timestamps and emphasis on its line.
+When an org buffer is set up and the plugin is loaded (or lazy.nvim
+loads it later), org.nvim hooks itself in; nothing to configure, and a
+plugin that isn't installed is never loaded. `integrations` in `setup()`
+turns each one off: >lua
+    require("org").setup({
+      integrations = { mini_ai = true, snacks_scope = true, flash = true },
+    })
+<
+                                               *org-integrations-mini-ai*
+mini.ai: org buffers get these `custom_textobjects` (in
+`vim.b.miniai_config`, kept with any the buffer already has):
+  `h`  the headline and its section, up to the first child (`ih`: the
+       section without the headline line)
+  `r`  the subtree (`ir`: below the headline line)
+  `e`  the element at the cursor (`ie`: a block's or drawer's contents)
+  `B`  a `#+BEGIN_`..`#+END_` or dynamic block (`iB`: its contents;
+       mini.ai's `b` stays the brackets)
+  `-`  a list item and its children (`i-`: its text after the bullet
+       and checkbox, charwise)
+  `T`  a table (`#+TBLFM:` lines included)
+  `L`  a link (`iL`: its description)
+  `d`  a timestamp or range (`id`: inside its brackets)
+  `m`  emphasis: *bold*, /italic/, _underline_, +strike+, =verbatim=,
+       ~code~ (`im`: the text inside the markers)
+The letters follow org.nvim's own text objects (|org-textobj|), whose
+buffer keys (`ah`, `ir`, ...) stay first; mini.ai adds the "next" and
+"last" variants (`anB`, `ilL`), its counts and its `g[` / `g]` motions.
+A table instead of `true` gives other letters, `false` leaves one out: >lua
+    integrations = { mini_ai = { block = "o", emphasis = false } }
+<With the option off, add them to mini.ai yourself, for example only for
+org buffers: >lua
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = "org",
+      callback = function()
+        vim.b.miniai_config = {
+          custom_textobjects = require("org.integrations.mini_ai").spec({ block = "o" }),
+        }
+      end,
+    })
+<
+                                          *org-integrations-snacks-scope*
+snacks.nvim: `Snacks.scope` has no way to plug in another source, so
+org.nvim wraps `Snacks.scope.get` for org buffers (other buffers are
+left to snacks). The scope at the cursor is the innermost element of
+two lines or more (snacks' `min_size`), then each enclosing element and
+subtree, so `Snacks.indent`'s scope guide, the `ii` / `ai` text objects
+and the `[i` / `]i` jumps follow the org structure. `ai` takes the whole
+block, item or subtree; `ii` its contents (inside the `#+BEGIN` and
+`#+END` lines, below the headline or the item's first line); repeating
+them in Visual mode grows the selection. The guide is drawn at the
+element's indentation, so it shows only beside indented lines. Nothing
+to set up beyond snacks' own: >lua
+    require("snacks").setup({ indent = { enabled = true }, scope = { enabled = true } })
+<
+                                                 *org-integrations-flash*
+flash.nvim: in org windows, flash's tree-sitter jump labels the
+emphasis, link or timestamp at the cursor, the elements around it and
+the subtrees; a label selects one, or with an operator acts on it
+(`yS` + label). The key LazyVim and flash's README bind, >lua
+    vim.keymap.set({ "n", "x", "o" }, "S", function() require("flash").treesitter() end)
+<works unchanged. `require("org.integrations.flash").jump(opts)` does
+the same even with `integrations.flash = false`, and is flash's own
+jump outside org buffers. flash's remote tree-sitter search
+(`treesitter_search`) still needs a parser.
+
 ==============================================================================
 26. APPEARANCE AND HIGHLIGHTS                                 *org-appearance*
 
@@ -7725,6 +7797,8 @@ export ~                                                   *org-config-export*
 mouse ~
   org_mouse false, features { "context-menu", "yank-link", "activate-stars",
   "activate-bullets", "activate-checkboxes" } (|org-mouse|)
+integrations ~
+  mini_ai true, snacks_scope true, flash true (|org-integrations|)
 notifications ~
   enabled false, reminder_time { 12, 9, 6, 3, 0 }, check_interval 60,
   system_notification true, single_instance true, notifier nil
