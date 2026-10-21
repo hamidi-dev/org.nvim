@@ -5689,6 +5689,8 @@ are Lua functions: >lua
       },
     }
 <
+A key may be written with underscores (`parse_tree`, `plain_text`,
+`final_output`); the filters run after the back-end's own of that type.
 Back-ends ~                                              *org-export-backends*
 HTML          ox-html: XHTML strict by default (`#+HTML_DOCTYPE: html5`,
               `html5-fancy:t`), default CSS, MathJax, postamble "auto"
@@ -8990,7 +8992,12 @@ Differences from Emacs:
   `emacs --batch` (`babel.emacs_lisp`) that knows nothing of your Emacs
   configuration unless its `args` load it; without an Emacs executable
   only the interpreter's subset works.
-- Export: see |org-export-unsupported|.
+- Export: see |org-export-unsupported|. In HTML, a file link with a
+  search option to a PDF (`[[file:doc.pdf::5]]`, `attachment:x.pdf::5`)
+  isn't searched for: a page number becomes `#page=5`, another option the
+  anchor (Emacs searches the PDF's raw bytes as text, which aborts the
+  export or gives `#MissingReference`). Other files are searched as in
+  Emacs.
 - Links (|org-links|):
   - `elisp:(sexp)` links are evaluated in a separate `emacs --batch`
     (`babel.emacs_lisp`), not in the editor, after `links.confirm_elisp`
