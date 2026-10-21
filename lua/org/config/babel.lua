@@ -144,7 +144,12 @@ local defaults = {
       ["C++"] = { cmd = "g++", ext = "cpp" },
       cpp = { cmd = "g++", ext = "cpp" },
       D = { cmd = "rdmd", ext = "d" },
-      awk = { cmd = "awk -f", ext = "awk" },
+      awk = { cmd = "awk", ext = "awk" }, -- org-babel-awk-command (ob-awk adds -f)
+      -- the result is the body itself (ob-css, ob-makefile)
+      css = {},
+      makefile = {},
+      -- the body as Org, $NAME replaced; :results latex/html/ascii export it
+      org = { default_header_args = { results = "raw silent", exports = "code" } },
       -- ports of ob-LANG.el (see |org-babel-languages|); the other keys are
       -- that file's options
       plantuml = {

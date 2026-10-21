@@ -4909,7 +4909,7 @@ Languages ~
 default_header_args = {...} }`. `default_header_args` are that language's
 defaults (Emacs `org-babel-default-header-args:LANG`). Emacs enables only
 emacs-lisp (`org-babel-load-languages`); the plugin enables shells, python,
-lua, js/ts, ruby, perl, php, R, go, rust, sqlite, sql, C, C++/cpp, D and awk
+lua, js/ts, ruby, perl, php, R, go, rust, sqlite, sql, C, C++/cpp and D
 as well, and the ports of |org-babel-languages|. `:python`, `:ruby` and
 `:cmd` (js) choose the interpreter of one block, like Emacs.
   - emacs-lisp (elisp): run in a separate Emacs, `emacs -Q --batch`
@@ -5029,6 +5029,14 @@ runs. C-c C-v v shows the body as the Emacs expand function makes it.
   - forth: the lines run in gforth (`cmd`); `:results output` gives what
     each line printed, the default the last line's (`:session none` is an
     error like Emacs).
+  - awk: `cmd -f SCRIPT :cmd-line -v NAME='VALUE'... :in-file` (`cmd`
+    "awk"); a table variable is passed tab-separated, a list one element
+    per line; `:stdin ref` feeds a value the same way.
+  - css, makefile: the body is the result; nothing runs.
+  - org: the body is raw Org with `$NAME` replaced by `:var NAME`;
+    `:results latex`, `html` or `ascii` give its body-only export. The
+    defaults are `:results raw silent` and `:exports code`, so add
+    `:results replace` to insert it.
 
 Header arguments ~
 Header arguments merge like Emacs: `babel.default_header_args` (inline

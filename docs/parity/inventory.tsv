@@ -1937,12 +1937,12 @@ ob-C	org-babel-execute:C++	exec	done	babel.languages['C++'] (g++); exec.lua c_co
 ob-C	org-babel-execute:D	exec	done	babel.languages.D (rdmd); exec.lua c_compiler	ob-C's D path, same code as C/C++ (no D-only spec)	-
 ob-C	org-babel-execute:cpp	exec	done	babel.languages.cpp (g++); exec.lua c_compiler	ob-C alias of C++; babel_parity_spec	-
 ob-R	org-babel-execute:R	exec	done	babel.languages.R (Rscript); langs.lua family r	babel_repl_spec	-
-ob-awk	org-babel-execute:awk	exec	partial	babel.languages.awk (awk -f)	runs the body with awk -f, but ignores :var (awk -v), :stdin, :cmd-line and :in-file; Emacs probe: `:var x=5 :stdin tbl` gives a table, org.nvim no result; no spec	-
+ob-awk	org-babel-execute:awk	exec	done	babel.languages.awk (awk); babel/lang/awk.lua	ob-awk: -f SCRIPT :cmd-line -v NAME='VALUE' :in-file, :stdin ref, :prologue/:epilogue; babel_ob_misc_spec checked against Emacs with a fake awk	-
 ob-calc	org-babel-execute:calc	exec	done	babel.languages.calc (Lua Calc); babel/lang/calc.lua	ob-calc: :var push, stack keys; babel_ob_calc_spec (Emacs output)	-
 ob-clojure	org-babel-execute:clojure	exec	done	babel/lang/clojure.lua (ob.lua HANDLERS)	babel_ob_clojure_spec	-
 ob-clojure	org-babel-execute:clojurescript	exec	done	babel/lang/clojure.lua (ob.lua HANDLERS)	nbb backend; babel_ob_clojure_spec	-
 ob-csharp	org-babel-execute:csharp	exec	done	babel/lang/csharp.lua	babel_ob_csharp_spec	-
-ob-css	org-babel-execute:css	exec	missing	-	ob-css returns the body as the result; org.nvim errors "No org-babel-execute function for css"	-
+ob-css	org-babel-execute:css	exec	done	babel.languages.css; babel/lang/body.lua	ob-css: the body is the result; babel_ob_misc_spec	-
 ob-ditaa	org-babel-execute:ditaa	exec	done	babel/lang/ditaa.lua	babel_ob_ditaa_spec	-
 ob-dot	org-babel-execute:dot	exec	done	babel.languages.dot (dot); babel/lang/dot.lua	ob-dot: :file :cmd :cmdline; babel_ob_tools_spec with fake dot	-
 ob-emacs-lisp	org-babel-execute:elisp	exec	done	babel/elisp.lua (emacs --batch, else the formula interpreter)	babel_elisp_spec	-
@@ -1960,12 +1960,12 @@ ob-latex	org-babel-execute:latex	exec	done	babel/lang/latex.lua	babel_ob_latex_s
 ob-lilypond	org-babel-execute:lilypond	exec	done	babel/lang/lilypond.lua	babel_ob_lilypond_spec	-
 ob-lisp	org-babel-execute:lisp	exec	done	babel/lang/lisp.lua	sbcl --script in place of SLIME (org-babel-lisp-eval-fn is partial); babel_ob_lisp_spec	-
 ob-lua	org-babel-execute:lua	exec	done	babel.languages.lua (in Neovim, or cmd); langs.run_lua	babel_emacs_spec	-
-ob-makefile	org-babel-execute:makefile	exec	missing	-	ob-makefile returns the body as the result; org.nvim errors "No org-babel-execute function for makefile"	-
+ob-makefile	org-babel-execute:makefile	exec	done	babel.languages.makefile; babel/lang/body.lua	ob-makefile: the body is the result; babel_ob_misc_spec	-
 ob-maxima	org-babel-execute:maxima	exec	done	babel/lang/maxima.lua	babel_ob_scripts_spec	-
 ob-ocaml	org-babel-execute:ocaml	exec	done	babel/lang/ocaml.lua	babel_ob_scripts_spec	-
 ob-octave	org-babel-execute:matlab	exec	done	babel.languages.matlab (matlab); babel/lang/octave.lua	ob-octave matlab path; no sessions; babel_ob_tools_spec with fake matlab	-
 ob-octave	org-babel-execute:octave	exec	done	babel.languages.octave (octave); babel/lang/octave.lua	ob-octave: value wrapper, graphics :file; no sessions; babel_ob_tools_spec with fake octave	-
-ob-org	org-babel-execute:org	exec	missing	-	ob-org: the body (with $var expansion) as raw Org, or exported with :results latex/html/ascii; org.nvim errors "No org-babel-execute function for org"	-
+ob-org	org-babel-execute:org	exec	done	babel.languages.org (raw silent); babel/lang/org.lua	ob-org: $var expansion, leading commas removed, :results latex/html/ascii body-only export; babel_ob_misc_spec checked against Emacs	-
 ob-perl	org-babel-execute:perl	exec	done	babel.languages.perl; langs.lua family perl	babel_var_spec	-
 ob-plantuml	org-babel-execute:plantuml	exec	done	babel/lang/plantuml.lua	babel_ob_plantuml_spec	-
 ob-processing	org-babel-execute:processing	exec	done	babel/lang/processing.lua	babel_ob_processing_screen_spec	-

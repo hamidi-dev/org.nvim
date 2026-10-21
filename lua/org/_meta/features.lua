@@ -644,7 +644,7 @@
 ---`lua` runs inside Neovim unless `cmd` is another interpreter
 ---(`org-babel-lua-command`). For the ports of ob-LANG.el it is that
 ---language's command (java, julia, groovy, ocaml, maxima, gnuplot, ghci,
----`sbcl --script`, the gfortran compiler, dot, sed, sass, `octave -q`,
+---`sbcl --script`, the gfortran compiler, dot, sed, awk, sass, `octave -q`,
 ---`matlab -nosplash`, gforth, ...).
 ---@field cmd? string|string[]
 ---Extension of the temp file, e.g. `"py"`. Defaults to a built-in
@@ -822,7 +822,7 @@
 ---Languages that can be evaluated, merged key by key with the defaults
 ---(sh, shell, bash, zsh, fish, python, python3, lua, js, javascript,
 ---typescript, ts, ruby, perl, php, r, R, go, rust, sqlite, sql, C, C++,
----cpp, D, awk, and the ob-LANG ports: plantuml, ditaa, gnuplot, latex,
+---cpp, D, and the ob-LANG ports: awk, css, makefile, org, plantuml, ditaa, gnuplot, latex,
 ---lilypond, java, csharp, haskell, clojure, clojurescript, lisp, scheme,
 ---fortran, processing, screen, julia, groovy, ocaml, maxima, calc, dot,
 ---sed, sass, octave, matlab, forth). Emacs
