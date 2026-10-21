@@ -905,7 +905,7 @@ its options may still change):
 
 | ✅ Stable | 🧪 Experimental |
 | --- | --- |
-| `ql`, `super_agenda`, `present`, `roam`, `quickadd`, `ics`, `kanban`, `sidebar`, `merge`, `transclusion`, `heatmap` | `review`, `pomodoro`, `drill`, `cli`, `diagrams`, `code`, `literate`, `lsp`, `timeline`, `hugo`, `journal` |
+| `ql`, `super_agenda`, `present`, `roam`, `quickadd`, `ics`, `kanban`, `sidebar`, `merge`, `transclusion`, `heatmap` | `review`, `pomodoro`, `drill`, `cli`, `diagrams`, `code`, `literate`, `lsp`, `timeline`, `hugo`, `journal`, `src_lsp` |
 
 An experimental extension is promoted once it meets measurable criteria
 (specs, coverage, docs, releases without a breaking change, no open bugs),
@@ -1086,6 +1086,14 @@ each one stands.
   files, something Emacs can't do (`:h org-extensions-lsp`).
 
   ![The org language server: org-lint diagnostics inline, the outline as document symbols, hover on a timestamp and on a link, and renaming a CUSTOM_ID updates the links in another file](https://raw.githubusercontent.com/xheisenbugx/org.nvim/media/lsp.gif)
+
+- 🧪 **`src_lsp`** (like [otter.nvim](https://github.com/jmbuhr/otter.nvim)):
+  the language servers you set up with `vim.lsp.enable()` work inside
+  `#+begin_src` blocks of the languages you list. Diagnostics show in the
+  block as you type, and go to definition, hover, references, signature
+  help and completion inside a block are answered by the block's language
+  server; a definition in another block jumps there in the org file
+  (`:h org-extensions-src-lsp`).
 
 - ✅ **`transclusion`** ([org-transclusion](https://github.com/nobiot/org-transclusion)):
   `#+transclude: [[file:notes.org::*Heading]] :level 2` or

@@ -1,0 +1,24 @@
+---@meta
+-- LuaLS type definitions for `require("org").setup({ extensions = { src_lsp = ... } })`.
+-- Annotations only; never loaded at runtime. The `src_lsp` field of
+-- org.Config.Extensions is declared in config.lua.
+
+---@class org.Config.Extensions.SrcLsp
+---`false` keeps the extension off.
+---@field enabled? boolean
+---Languages whose blocks get their language servers: names (`{ "lua", "python" }`),
+---or name -> `{ servers = { ... } }` naming `vim.lsp.config` configurations (or
+---config tables) to start; without `servers`, every enabled configuration whose
+---`filetypes` has the language's filetype. (default: `{}`)
+---@field languages? string[]|table<string, org.Config.Extensions.SrcLsp.Language|boolean>
+---Milliseconds after the last change before the hidden buffers are updated. (default: `200`)
+---@field debounce? integer
+---Show the servers' diagnostics in the block bodies. (default: `true`)
+---@field diagnostics? boolean
+---Offer the servers' completion (LSP completion sources, `<C-x><C-o>` in a block).
+---(default: `true`)
+---@field completion? boolean
+
+---@class org.Config.Extensions.SrcLsp.Language
+---Servers to start: `vim.lsp.config` names or config tables.
+---@field servers? (string|vim.lsp.Config)[]

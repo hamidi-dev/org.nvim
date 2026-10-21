@@ -9345,7 +9345,7 @@ Each extension is marked as one of:
 Stable:       `ql`, `super_agenda`, `present`, `roam`, `quickadd`, `ics`,
               `kanban`, `sidebar`, `merge`, `transclusion`, `heatmap`
 Experimental: `review`, `pomodoro`, `drill`, `cli`, `diagrams`, `code`,
-              `literate`, `lsp`, `timeline`, `hugo`, `journal`
+              `literate`, `lsp`, `timeline`, `hugo`, `journal`, `src_lsp`
 
 Bug reports about experimental extensions are just as welcome.
 
@@ -12183,6 +12183,79 @@ Notes ~
     10 seconds of the rename (it does so while applying the edit).
   - `:checkhealth org` shows the running client, the number of workspace
     files and of org-lint checkers.
+
+------------------------------------------------------------------------------
+Language servers in src blocks                        *org-extensions-src-lsp*
+
+Stability: experimental (|org-extensions-stability|)
+
+`src_lsp` lets the language server of a block's language work inside
+`#+begin_src` blocks, like otter.nvim: its diagnostics show in the block,
+and go to definition, hover, references and completion are answered by
+it. It uses the servers you configured with |vim.lsp.config()| and
+|vim.lsp.enable()|; list the languages it should serve:
+>lua
+    vim.lsp.enable("lua_ls")
+    require("org").setup({
+      extensions = { src_lsp = { languages = { "lua", "python" } } },
+    })
+<
+Nothing is loaded and no server started until an org buffer (a file)
+with a block of a listed language opens. For each such buffer and
+language, a hidden buffer holds that language's blocks at their own
+line numbers (every other line blank), with the language's filetype
+(`src_lang_modes`, as in the edit buffer of |org-babel|), and the
+language servers attach to it. It follows your edits `debounce` ms
+after the last one. A small in-process server attached to the org
+buffer forwards requests made inside a block to those servers and maps
+the answers back, so the LSP functions and keys work there:
+|vim.lsp.buf.definition()| (map it to `gd`), `K` (hover), `grr`, `gri`,
+`grt`, <C-s> (signature help); a definition in another block jumps to
+its line in the org buffer. Outside the blocks it answers nothing, and
+org's own features (|org-extensions-lsp| included) keep working.
+
+Completion ~
+The forwarding server is an LSP completion source: |lsp-completion|,
+blink.cmp and nvim-cmp's LSP sources offer the server's items inside a
+block, and `<C-x><C-o>` (org's 'omnifunc') hands over to
+|vim.lsp.omnifunc()| there. `completion = false` turns this off.
+
+Options ~
+  `languages`    `{}`  the languages served: names (`{ "lua", "sh" }`),
+                 or name -> `{ servers = { ... } }` to choose the
+                 servers: names of |vim.lsp.config()| configurations or
+                 config tables (`{ name = ..., cmd = ... }`). Without
+                 `servers`, every enabled configuration whose `filetypes`
+                 has the language's filetype starts. A block whose
+                 language has the same filetype as a listed one (`sh`
+                 and `bash`) shares its hidden buffer.
+  `debounce`     `200`  milliseconds after the last change before the
+                 hidden buffers are updated (a request inside a block
+                 updates them first).
+  `diagnostics`  `true`  show the servers' diagnostics in the block
+                 bodies (namespace `org_src_lsp`).
+  `completion`   `true`  see above.
+
+Notes ~
+  - Each block is seen as it is in the file: noweb references
+    (`<<name>>`) are not expanded, `:var` values are not defined and
+    `:prologue` is not added, so a server may report them; blocks of one
+    language form one file whatever their `:tangle` or `:session`.
+  - A block's common indentation is removed (unless `-i` or
+    `src_preserve_indentation`), and the comma of an escaped `,*` line
+    becomes a space; positions are mapped back.
+  - The hidden buffer is named after the org file with the language's
+    extension (`notes.org.src-lua.lua`) and never written; its root
+    directory comes from the configuration's `root_markers` (or
+    `root_dir`) searched from the org file's directory. Some servers
+    (lua_ls) only report diagnostics for a file inside a root.
+  - The servers' diagnostics also stay on the hidden buffer, so a
+    workspace-wide diagnostics list shows them under its name.
+  - Rename, code actions and formatting are not forwarded.
+  - `:checkhealth org` lists the servers of each language and warns
+    about a language without one, or a server whose program is missing.
+  - otter.nvim does the same for many filetypes; enable only one of the
+    two for org buffers.
 
 ------------------------------------------------------------------------------
 Transclusion (org-transclusion)                  *org-extensions-transclusion*

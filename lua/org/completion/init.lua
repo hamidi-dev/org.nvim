@@ -575,6 +575,14 @@ end
 
 --- Vim omnifunc.
 function M.omnifunc(findstart, base)
+  -- inside a src block of a language with a server (extensions.src_lsp)
+  local src_lsp = package.loaded["org.extensions.src_lsp"]
+  if src_lsp then
+    local res = src_lsp.omnifunc(findstart, base)
+    if res ~= nil then
+      return res
+    end
+  end
   local line = vim.api.nvim_get_current_line()
   local col = vim.api.nvim_win_get_cursor(0)[2]
   if findstart ~= 1 then
