@@ -98,6 +98,11 @@ inline diagnostics, for `lsp.tape`; it copies `demo/lsp/*.org` into
 for a file that doesn't exist yet (and under the `/tmp` symlink on macOS)
 can't be matched to its LSP URI, so diagnostics and edits would miss it.
 
+`demo/src_lsp.lua` (for `src-lsp.tape`) turns on the `src_lsp` extension
+for lua blocks with `lua-language-server` (it must be installed), copies
+`demo/src_lsp/*.org` into `$ORG_DEMO_DIR/src_lsp` and writes a
+`.luarc.json` there: lua_ls only reports diagnostics inside a root.
+
 `demo/kanban.lua`, `timeline.lua`, `heatmap.lua` and `sidebar.lua` turn on
 the view extensions for their tapes. They run `demo/views.lua`, which runs
 `init.lua` and copies `demo/views/*.org` into `$ORG_DEMO_DIR/views` with the
