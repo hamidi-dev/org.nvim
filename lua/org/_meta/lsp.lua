@@ -39,6 +39,29 @@
 ---What formatting does: indent like `=`, align tables, realign tags.
 ---(default: `{ indent = true, tables = true, tags = true }`)
 ---@field formatting? { indent?: boolean, tables?: boolean, tags?: boolean }
+---Inlay hints, each kind `true` by default.
+---@field inlay_hints? org.Config.Extensions.Lsp.InlayHints
+---Code lenses.
+---@field code_lens? org.Config.Extensions.Lsp.CodeLens
+
+---@class org.Config.Extensions.Lsp.InlayHints
+---The time clocked in each subtree. (default: `true`)
+---@field clock? boolean
+---How far a DEADLINE or SCHEDULED date is ("in 3 d.", "2 d. ago"). (default: `true`)
+---@field countdowns? boolean
+---Time clocked against the Effort, rolled up from the children. (default: `true`)
+---@field effort? boolean
+---A `:block` range for the clock sums (default: `clock.display_default_range`).
+---@field clock_range? string
+
+---@class org.Config.Extensions.Lsp.CodeLens
+---"Run block" on src blocks. (default: `true`)
+---@field run_block? boolean
+---"Update" on dynamic blocks. (default: `true`)
+---@field dblock? boolean
+---"Clock in" / "Clock out" on headlines: `"todo"` (not-done TODO headlines
+---and the clocked one), `true` (every headline) or `false`. (default: `"todo"`)
+---@field clock? boolean|"todo"
 
 ---@class org.Config.Extensions.Lsp.Features
 ---@field document_symbols? boolean
@@ -54,6 +77,8 @@
 ---@field completion? boolean
 ---@field formatting? boolean
 ---@field selection_range? boolean
+---@field inlay_hints? boolean
+---@field code_lens? boolean
 
 ---@class org.Config.Extensions.Lsp.Diagnostics
 ---Milliseconds without changes before linting again. (default: `500`)

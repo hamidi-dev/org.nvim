@@ -34,6 +34,8 @@ function M.capabilities()
     documentFormattingProvider = on("formatting") or nil,
     documentRangeFormattingProvider = on("formatting") or nil,
     selectionRangeProvider = on("selection_range") or nil,
+    inlayHintProvider = on("inlay_hints") and { resolveProvider = false } or nil,
+    codeLensProvider = on("code_lens") and { resolveProvider = true } or nil,
   }
   if on("code_actions") then
     caps.codeActionProvider = { codeActionKinds = { "quickfix", "refactor", "refactor.rewrite" } }
@@ -205,6 +207,9 @@ R["textDocument/selectionRange"] = function(_, params)
   return require("org.extensions.lsp.selection").ranges(doc_or_err(params), params.positions)
 end
 
+require("org.extensions.lsp.inlay_hints").register(R, doc_or_err)
+require("org.extensions.lsp.code_lens").register(R, doc_or_err)
+
 ---@type table<string, fun(srv: table, params: table)>
 M.notifications = {}
 local N = M.notifications
@@ -322,6 +327,8 @@ function M.cmd(dispatchers)
       end
     end)
   end
+
+  require("org.extensions.lsp.inlay_hints").watch(srv, dispatchers)
 
   local function exit(code)
     if srv.closing then

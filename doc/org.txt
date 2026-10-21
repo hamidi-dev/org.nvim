@@ -11974,6 +11974,9 @@ What it does ~
                    section, the subtree, its parents' subtrees and the
                    file. Neovim 0.12 and later use it for `an` and `in`
                    in Visual mode (`vim.lsp.buf.selection_range()`).
+  inlayHint        clock sums, deadline countdowns and effort (below).
+  codeLens         "Run block", "Update" and "Clock in" / "Clock out"
+                   (below).
 
 Completion ~
 Neovim's built-in LSP completion then works in org buffers with no
@@ -12061,6 +12064,42 @@ Code actions ~
     `org.action` command. `code_actions.entry` takes a list of
     `{ action, title }` pairs instead.
 
+Inlay hints ~
+With `:lua vim.lsp.inlay_hint.enable()` the server adds, at the end of
+lines (each kind turned off on its own under `inlay_hints`):
+  `clock`        "clocked 1:30" on each headline whose subtree has clocked
+               time, the sums of `clock_display` (|org-clock|) over
+               `clock_range` (a `:block` range like "thisweek"; by default
+               `clock.display_default_range`, this year)
+  `countdowns`   after a DEADLINE or SCHEDULED timestamp, how far it is,
+               in the agenda's words: "in 3 d.", "today", "2 d. ago".
+               Like the agenda's reminders, a coming date is counted
+               down only within the warning period (the deadline's `-Nd`
+               cookie, else `deadline_warning_days`, 14); past dates
+               always are. Done entries get none.
+  `effort`       "effort 1:30/2:00" on a headline with an Effort: the time
+               clocked in its subtree (all of it) against the estimate,
+               with "over" once it is passed. A headline whose children
+               have efforts gets their sum, like column view's `{:}`.
+Hints follow the buffer as you type. When a clock starts or stops, the
+server asks the client to request hints and lenses again
+(`workspace/inlayHint/refresh`, `workspace/codeLens/refresh`).
+
+Code lenses ~
+Lenses over the line they act on (`vim.lsp.codelens.enable()`, or
+`vim.lsp.codelens.refresh()` on Neovim 0.11; run the one under the cursor
+with `vim.lsp.codelens.run()`):
+  `run_block`    "Run block" on `#+begin_src` lines: executes the block
+               (`babel_execute`)
+  `dblock`       "Update" on `#+BEGIN:` dynamic blocks (`dblock_update`)
+  `clock`        "Clock in", or "Clock out" on the clocked headline; on
+               headlines with a TODO keyword that isn't done (`"todo"`),
+               on every headline (`true`) or none (`false`)
+The lenses are resolved (`codeLens/resolve`) when shown, so the clock
+lens says what clicking it does now. Their command, `org.lens`, is a
+client-side command (`vim.lsp.commands`) running the action at the
+lens's line, in a window showing the file.
+
 Workspace ~
 References, rename, backlink counts and workspace symbols look at the
 agenda files, the `.org` files under `org_directory` (with
@@ -12102,8 +12141,8 @@ Options ~
   `features`                `{ document_symbols, workspace_symbols,
                             diagnostics, hover, definition, references,
                             rename, code_actions, folding, document_links,
-                            completion, formatting, selection_range }`
-                            (all true)
+                            completion, formatting, selection_range,
+                            inlay_hints, code_lens }` (all true)
   `formatting`              `{ indent = true, tables = true,
                             tags = true }`
   `diagnostics`             `{ debounce = 500, max_lines = 3000,
@@ -12124,6 +12163,10 @@ Options ~
   `rename`                  `{ update_descriptions = true,
                             write_unloaded = true }`
   `code_actions`            `{ entry = true, conversions = true }`
+  `inlay_hints`             `{ clock = true, countdowns = true,
+                            effort = true, clock_range = nil }`
+  `code_lens`               `{ run_block = true, dblock = true,
+                            clock = "todo" }`
 
 Notes ~
   - The server uses UTF-8 positions (`positionEncoding`), so columns are
