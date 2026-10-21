@@ -444,6 +444,9 @@ org.nvim picker ~
 
 org.nvim external tools ~
 - pandoc, makeinfo and the LaTeX compiler for export
+- the document viewer `docview:FILE::PAGE` links open a page with
+  (`links.docview_command`): a warning only when the option names a
+  program that isn't installed
 - the interpreter of each Babel language (|org-babel-languages|)
 - the desktop notifier of reminders
 - gpg (`crypt.gpg_program`) for |org-crypt|: a warning only with
@@ -3725,7 +3728,20 @@ every link in full.
 
 Targets:
   https://… http://… ftp:… mailto:…   opened with |vim.ui.open()|
+  news:… irc:…                        (the system's handler)
+  eww:URL  w3m:URL                    URL opened with |vim.ui.open()|
+                                      (Emacs browses it in eww / w3m)
   doi:10.1000/x                       `links.doi_server_url` + path
+  docview:FILE::PAGE                  the document at page PAGE, with
+                                      `links.docview_command` (a command
+                                      with `%s` = file, `%p` = page, a
+                                      function(file, page), or false);
+                                      unset, the first installed of
+                                      zathura, okular, evince, qpdfview,
+                                      mupdf, SumatraPDF. Without a page,
+                                      or a viewer, it opens like file:
+                                      (macOS Preview can't go to a page:
+                                      install zathura or set the option)
   file:path  ./rel  ~/p  /abs         open a file; add a search option:
                                       `::42`, `::*Heading`, `::#custom-id`,
                                       `::(coderef)`, `::/regexp/`,
@@ -7561,7 +7577,9 @@ links ~
   search_must_match_exact_headline "query-to-create" (true|false),
   frame_setup { file = "other-window" } ("current"|"split"|"vsplit"|"tab"|
   function), make_description nil, doi_server_url "https://doi.org/",
-  search_functions {}, translation_function nil, mouse_1_follows_link 450
+  docview_command nil ("cmd --page=%p %s"|function(file, page)|false;
+  |org-links|), search_functions {}, translation_function nil,
+  mouse_1_follows_link 450
   (true|"double"|ms|false), tab_follows_link false,
   open_directory_means_index_dot_org false, open_non_existing_files false
   (|org-links-mouse|), info_other_documents { dir, libc, make } (URLs of
@@ -9040,9 +9058,14 @@ Differences from Emacs:
   - `help:` opens Vim's |:help|: Emacs `help:` links name Elisp functions
     and variables (describe-function), which do not exist here. `info:`
     runs the `info` program in a terminal, `man:` uses |:Man|.
-  - Links to Emacs applications (gnus, rmail, mhe, bbdb, irc/erc, eww,
-    w3m, calendar) can't be followed or stored: there is no such
-    application in Neovim. `docview:` opens the file. BibTeX links
+  - Links to Emacs applications (gnus, rmail, mhe, bbdb, calendar) can't
+    be followed or stored: there is no such application in Neovim.
+    `eww:` and `w3m:` links open their URL with |vim.ui.open()| (Emacs
+    browses it in eww or emacs-w3m), and a link stored in a web page
+    buffer (netrw's `:e https://…`) is its URL; `irc:` and `news:` go to
+    the system's handler (Emacs: ERC, Gnus). `docview:FILE::PAGE` opens
+    the document in an external viewer at that page
+    (`links.docview_command`; Emacs shows it in a DocView buffer). BibTeX links
     (|org-bibtex|) work: `bibtex:` opens the file and a link stored in a
     .bib buffer finds the entry. `bibtex_yank` reads only the yanked text
     (Emacs writes an older read entry when the yanked text has none),

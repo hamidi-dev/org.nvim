@@ -47,6 +47,9 @@ function M.new(opts)
 end
 
 M.DEFAULT_LINK_TYPES = {
+  "eww",
+  "docview",
+  "w3m",
   "attachment",
   "id",
   "file+sys",

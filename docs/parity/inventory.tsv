@@ -1992,27 +1992,27 @@ ol	link:elisp	link	done	links/shell.lua open_elisp	asks, then evaluates in emacs
 ol	link:file	link	done	links/open.lua open_file_link	links_follow_spec, links_parity_spec	-
 ol	link:file+emacs	link	done	links/open.lua open_file_link (app vim)	opens in Neovim, as Emacs opens in Emacs; export_emacs_spec	-
 ol	link:file+sys	link	done	links/open.lua open_file_link (app system)	the system application; export_emacs_spec, lint_spec	-
-ol	link:ftp	link	done	links/open.lua: vim.ui.open, the same branch as http:	no ftp:-specific spec	-
+ol	link:ftp	link	done	links/open.lua: vim.ui.open, the same branch as http:	tests/spec/links_external_types_spec.lua	-
 ol	link:help	link	vim	links/open.lua: :help	opens Neovim's :help for the tag; Emacs describes a Lisp function or variable	-
 ol	link:http	link	done	links/open.lua: vim.ui.open	links_parity_spec	-
 ol	link:https	link	done	links/open.lua: vim.ui.open	links_parity_spec	-
 ol	link:mailto	link	done	links/open.lua: vim.ui.open, the same branch as http:	the system mail handler (Emacs: compose-mail)	-
-ol	link:news	link	done	links/open.lua: vim.ui.open, the same branch as http:	no news:-specific spec	-
+ol	link:news	link	done	links/open.lua: vim.ui.open, the same branch as http:	tests/spec/links_external_types_spec.lua	-
 ol	link:shell	link	done	links/shell.lua open_shell	links_parity_spec	-
 ol	link:shortdoc	link	emacs-only	-	Emacs shortdoc function groups	-
 ol-bbdb	link:bbdb	link	emacs-only	-	BBDB contact database	-
 ol-bibtex	link:bibtex	link	done	links/open.lua (file with ::key search); ol-bibtex store	bibtex_emacs_spec	-
-ol-docview	link:docview	link	partial	links/open.lua (as a file:)	opens the file, but drops ::PAGE (Emacs opens DocView at that page); no spec	-
+ol-docview	link:docview	link	done	links/open.lua: open_docview, links.docview_command (%s/%p; default the first installed of zathura/okular/evince/...); export/ox/links.lua: org-docview-export	opens the page in an external viewer (Emacs: a DocView buffer); without a page or a viewer, like file:; tests/spec/links_external_types_spec.lua	-
 ol-doi	link:doi	link	done	links/open.lua: link.doi_server_url	links_parity_spec	-
 ol-eshell	link:eshell	link	emacs-only	-	runs a command in Eshell	-
-ol-eww	link:eww	link	missing	-	Emacs browses the URL in eww; org.nvim does not know the type (could open it like http:)	-
+ol-eww	link:eww	link	done	links/open.lua: the URL with vim.ui.open; store.lua: a netrw https:// buffer stores its URL; exported like Emacs	Emacs browses in eww; tests/spec/links_external_types_spec.lua	-
 ol-gnus	link:gnus	link	emacs-only	-	Gnus	-
-ol-info	link:info	link	done	links/open.lua: info(1) in a terminal	Emacs opens its Info reader; no info:-follow spec	-
-ol-irc	link:irc	link	done	links/open.lua: vim.ui.open, the same branch as http:	the system irc:// handler (Emacs: ERC/rcirc); no irc:-specific spec	-
+ol-info	link:info	link	done	links/open.lua: info(1) in a terminal	Emacs opens its Info reader; tests/spec/links_external_types_spec.lua	-
+ol-irc	link:irc	link	done	links/open.lua: vim.ui.open, the same branch as http:	the system irc:// handler (Emacs: ERC/rcirc); tests/spec/links_external_types_spec.lua	-
 ol-man	link:man	link	done	links/open.lua: :Man	links_follow_spec	-
 ol-mhe	link:mhe	link	emacs-only	-	MH-E mail reader	-
 ol-rmail	link:rmail	link	emacs-only	-	Rmail	-
-ol-w3m	link:w3m	link	missing	-	Emacs browses the URL in emacs-w3m; org.nvim does not know the type (could open it like http:)	-
+ol-w3m	link:w3m	link	done	links/open.lua: the URL with vim.ui.open; store.lua: a netrw https:// buffer stores its URL; exported like Emacs	Emacs browses in emacs-w3m; tests/spec/links_external_types_spec.lua	-
 org-attach	link:attachment	link	done	links/open.lua: org.attach resolve_attachment	attach_spec	-
 org-id	link:id	link	done	links/open.lua: find_id_link	links_parity_spec, api_spec	-
 ox-ascii	ascii:bold	trans	done	export/ascii/backend.lua	export_ascii_spec, emacs_export_parity_spec	-

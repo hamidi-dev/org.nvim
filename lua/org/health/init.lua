@@ -651,6 +651,32 @@ function M.check_emacs(h)
   end
 end
 
+--- The viewer docview:FILE::PAGE links open a page with
+--- (`links.docview_command`): a warning only when the option names a
+--- program that isn't installed.
+function M.check_docview(h)
+  local docview = (require("org.config").opts.links or {}).docview_command
+  if type(docview) == "function" then
+    h.ok("docview: links open pages with links.docview_command")
+  elseif type(docview) == "string" then
+    local exe = vim.split(docview, "%s+", { trimempty = true })[1] or ""
+    if vim.fn.executable(exe) == 1 then
+      h.ok(string.format("docview: links open pages with %s", exe))
+    else
+      h.warn(string.format("%s not found (links.docview_command): docview: links can't open their page", exe))
+    end
+  elseif docview == nil then
+    local found = require("org.links").docview_command()
+    if type(found) == "string" then
+      h.ok(string.format("docview: links open pages with %s", vim.split(found, " ")[1]))
+    else
+      h.info(
+        "no document viewer (zathura, okular, evince, ...): docview: links open the file without going to the page"
+      )
+    end
+  end
+end
+
 function M.check()
   local h = vim.health
   local cfg = require("org.config").opts
@@ -707,6 +733,7 @@ function M.check()
       end
     end
   end
+  M.check_docview(h)
   local ncfg = cfg.notifications or {}
   local notifier = require("org.agenda.notifications").desktop_backend()
   if ncfg.notifier then

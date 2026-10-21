@@ -428,6 +428,11 @@
 ---URL prefix of `doi:` links (`org-link-doi-server-url`).
 ---(default: `"https://doi.org/"`)
 ---@field doi_server_url? string
+---How `docview:FILE::PAGE` links open a document at a page: a command with
+---`%s` (file) and `%p` (page), a function, `false` (no page), or `nil` (the
+---first installed of zathura, okular, evince, qpdfview, mupdf, SumatraPDF).
+---(default: `nil`)
+---@field docview_command? string|false|fun(file: string, page: integer)
 ---Functions tried first on file search strings; return true when handled
 ---(`org-execute-file-search-functions`). (default: `{}`)
 ---@field search_functions? (fun(search: string): boolean)[]

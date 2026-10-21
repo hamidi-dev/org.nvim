@@ -44,7 +44,33 @@ function M.custom_protocol_maybe(link, desc, backend_name, info)
   if t == "info" then
     return M.info_link_export(link.path, desc, backend_name)
   end
+  if t == "docview" then
+    return M.docview_link_export(link.path, desc, backend_name, info)
+  end
   return nil
+end
+
+--- org-docview-export: a link to the document's absolute path, the page
+--- dropped.
+---@param path string
+---@param desc string|nil
+---@param backend_name string
+---@param info table|nil
+---@return string
+function M.docview_link_export(path, desc, backend_name, info)
+  local raw = path
+  path = path:match("^(.+)::.+$") or path
+  desc = desc or raw
+  local base = info and info.input_file and vim.fn.fnamemodify(info.input_file, ":p:h") or vim.fn.getcwd()
+  path = utils.expand(path, base)
+  if backend_name == "html" then
+    return string.format('<a href="%s">%s</a>', path, desc)
+  elseif backend_name == "latex" then
+    return string.format("\\href{%s}{%s}", path, desc)
+  elseif backend_name == "ascii" then
+    return string.format("[%s] (<%s>)", desc, path)
+  end
+  return path
 end
 
 --- org-info-emacs-documents
