@@ -26,6 +26,20 @@
 ---
 --- Lua sessions live inside Neovim as a persistent environment table, with
 --- a prompt buffer as transcript.
+---
+--- A port of ob-LANG.el (org.babel.lang.*) runs in a session when its
+--- handler has a `session` table:
+---
+---   { family = "julia",               -- the session family (key, buffer)
+---     repl = { default, argv, line }, -- like the REPL entries below
+---     command = fun(args, opts): string|string[], boolean?,  -- the REPL
+---                         -- command; true: used as it is (`opts.explicit`)
+---     prepare = fun(body, args, vars, ctx): { code, mode, echo?, convert },
+---     var_code? = fun(vars, args): string }  -- C-u C-c C-v C-z
+---
+--- `convert(res)` turns the session's answer (see `eval`) into the result.
+--- `echo` is text written to `<id>.echo`, which the REPL's helper may print
+--- before the begin marker so the code shows in the REPL buffer.
 
 local M = {}
 
@@ -327,6 +341,32 @@ REPL.r = {
 --- Languages whose `family` can run in a session.
 local KIND = { shell = "shell", fish = "shell", python = "repl", js = "repl", ruby = "repl", r = "repl", lua = "lua" }
 
+--- Files of a request in the session directory, removed when it ends.
+local REQUEST_FILES = { ".src", ".req", ".val", ".err", ".echo", ".run" }
+
+--- The handler of a port of ob-LANG.el with session support, or nil.
+function M.handler(lang)
+  local h = require("org.babel.ob").get(lang)
+  return h and h.session and h or nil
+end
+
+--- The session family of `lang`: the family of `org.babel.langs`, or the
+--- `session.family` of its ob-LANG port (whose REPL is then known here).
+---@param lang string
+---@return string
+function M.family(lang)
+  local h = M.handler(lang)
+  if h then
+    local fam = h.session.family or lang
+    if not REPL[fam] then
+      REPL[fam] = h.session.repl
+      KIND[fam] = "repl"
+    end
+    return fam
+  end
+  return require("org.babel.langs").family(lang)
+end
+
 local function repl_of(fam)
   return REPL[fam == "fish" and "shell" or fam]
 end
@@ -498,7 +538,7 @@ local function finish(sess, req, output, status)
       res.value = read_file(base .. ".val") or ""
     end
   end
-  for _, ext in ipairs({ ".src", ".req", ".val", ".err" }) do
+  for _, ext in ipairs(REQUEST_FILES) do
     os.remove(base .. ext)
   end
   stop_timer(req)
@@ -555,6 +595,9 @@ function send_next(sess)
   vim.fn.writefile(vim.split(req.code, "\n", { plain = true }), src)
   local params = req.params or {}
   vim.fn.writefile(vim.list_extend({ req.mode, req.file or "" }, params), base .. ".req")
+  if req.echo then
+    vim.fn.writefile(vim.split(req.echo, "\n", { plain = true }), base .. ".echo")
+  end
   sess.current = req
   sess.acc = ""
   sess.scan = 1
@@ -562,7 +605,7 @@ function send_next(sess)
   -- (readline's unix-line-discard: a Windows console would insert it, and
   -- takes \r for Enter)
   local win = vim.fn.has("win32") == 1
-  local line = r.line(sess, req.id, src, req.mode)
+  local line = r.line(sess, req.id, src, req.mode, req)
   local ok, err = pcall(vim.fn.chansend, sess.job, win and (line .. "\r") or ("\21" .. line .. "\n"))
   if not ok or err == 0 then
     sess.current = nil
@@ -704,7 +747,8 @@ end
 --- expression, as typed at the prompt).
 --- `opts.params` are the result params (python formats the value like
 --- Emacs), `opts.file` the graphics file.
----@param opts? { timeout?: integer, echo?: boolean, typed?: boolean, params?: string[], file?: string } `typed`: typed at the session's prompt
+--- `opts.echo_text` is written to `<id>.echo` for the REPL helper to show.
+---@param opts? { timeout?: integer, echo?: boolean, typed?: boolean, params?: string[], file?: string, echo_text?: string } `typed`: typed at the session's prompt
 function M.eval(sess, code, mode, cb, opts)
   opts = opts or {}
   if sess.kind == "lua" then
@@ -734,7 +778,15 @@ function M.eval(sess, code, mode, cb, opts)
     return
   end
   next_id = next_id + 1
-  local req = { id = next_id, code = code, mode = mode, cb = cb, params = opts.params, file = opts.file }
+  local req = {
+    id = next_id,
+    code = code,
+    mode = mode,
+    cb = cb,
+    params = opts.params,
+    file = opts.file,
+    echo = opts.echo_text,
+  }
   local timeout = opts.timeout
   if timeout and timeout > 0 then
     req.timer = vim.uv.new_timer()
@@ -785,7 +837,7 @@ function M.cancel(sess, req)
         sess.current = nil
         sess.acc = ""
         if sess.dir then
-          for _, ext in ipairs({ ".src", ".req", ".val", ".err" }) do
+          for _, ext in ipairs(REQUEST_FILES) do
             os.remove(sess.dir .. "/" .. req.id .. ext)
           end
         end

@@ -224,9 +224,10 @@ local defaults = {
         location = "screen",
       },
       -- impl: the implementation without a :scheme header (Geiser's
-      -- default); commands: implementation -> command; null_to:
+      -- default); commands: implementation -> command; session_commands:
+      -- implementation -> REPL of a :session; null_to:
       -- org-babel-scheme-null-to
-      scheme = { impl = "guile", commands = {}, null_to = "hline" },
+      scheme = { impl = "guile", commands = {}, session_commands = {}, null_to = "hline" },
       julia = { cmd = "julia" }, -- org-babel-julia-command
       -- org-babel-latex-*: preamble, begin_env and end_env are strings or
       -- functions(header_args) returning one; htlatex, htlatex_packages;

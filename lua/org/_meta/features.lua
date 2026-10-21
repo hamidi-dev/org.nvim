@@ -668,8 +668,9 @@
 ---lua: separator of several returned values
 ---(`org-babel-lua-multiple-values-separator`). (default: `", "`)
 ---@field multiple_values_separator? string
----python: the command of sessions, used as it is, e.g. `"ipython -i"`
----(`org-babel-python-command-session`). nil: `cmd -i`.
+---python, julia, ocaml: the command of sessions, used as it is, e.g.
+---`"ipython -i"` (`org-babel-python-command-session`). nil: `cmd -i`
+---(python), `cmd` with the REPL's own options (julia, ocaml).
 ---@field session_cmd? string
 ---java (javac), haskell (ghc), csharp (dotnet): the compiler
 ---(`org-babel-*-compiler`).
@@ -686,7 +687,8 @@
 ---`babashka_command`, `cli_command`, `nbb_command` (clojurescript
 ---`backend`); csharp `default_target_framework`,
 ---`additional_project_flags`, `generate_compile_command`,
----`generate_restore_command`; lisp `dir_fmt`; scheme `impl`, `commands`;
+---`generate_restore_command`; lisp `dir_fmt`; scheme `impl`, `commands`,
+---`session_commands`;
 ---haskell `lhs2tex`; processing `js_filename`; screen `location`.
 ---@field [string] any
 
