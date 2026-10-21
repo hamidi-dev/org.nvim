@@ -76,6 +76,99 @@ local function span_at(line, col, pattern)
   end
 end
 
+--- Run `fn` with the cursor on line `lnum`, then put it back
+--- (save-excursion).
+local function at_line(lnum, fn)
+  local win = vim.api.nvim_get_current_win()
+  local pos = vim.api.nvim_win_get_cursor(win)
+  vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+  local ok, r = pcall(fn)
+  if vim.api.nvim_win_is_valid(win) then
+    local last = vim.api.nvim_buf_line_count(vim.api.nvim_win_get_buf(win))
+    pcall(vim.api.nvim_win_set_cursor, win, { math.min(pos[1], last), pos[2] })
+  end
+  if not ok then
+    error(r, 0)
+  end
+  return r
+end
+
+--- C-c C-c on a plain list away from its items (org-ctrl-c-ctrl-c on a
+--- plain-list): with C-u, add or remove the checkboxes of its top items
+--- after the first one's; with C-u C-u, set them to `[-]`; then repair it.
+local function plain_list_action(lnum, arg)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local lists = require("org.lists")
+  local first = lists.item_at(bufnr, lnum)
+  if not first then
+    return nil
+  end
+  if lists.radio_list_p(bufnr, first) or vim.b[bufnr].org_checkbox_radio_mode then
+    return lists.toggle_radio_button(arg)
+  end
+  local struct = lists.struct_at(bufnr, lnum)
+  if not struct then
+    return nil
+  end
+  if arg then
+    local new
+    if arg == 16 then
+      new = "-"
+    elseif not first.checkbox then
+      new = " "
+    end
+    for _, it in ipairs(struct.items) do
+      if it.par == nil then
+        it.box = new
+      end
+    end
+  end
+  local shared = require("org.lists.shared")
+  shared.write_struct(struct, shared.ordered_p(bufnr, lnum))
+  lists.update_checkbox_count_maybe(bufnr, lnum)
+  return true
+end
+
+--- C-c C-c on an affiliated keyword: act on the element it belongs to,
+--- like org-ctrl-c-ctrl-c (org-element-context there is that element).
+--- Returns false when the line is a plain keyword (no element below
+--- it), else true and the result.
+---@return boolean handled, any result
+local function affiliated_action(lnum)
+  local el = require("org.element").at(0, lnum)
+  if not el or el.post <= lnum or el.first > lnum then
+    return false
+  end
+  local post = el.post
+  local post_line = line_at(post)
+  if el.type == "table" then
+    if in_table_el(post_line, post) then
+      return true, require("org.table.el").hint()
+    end
+    -- recalculate the whole table and send it (org-table-recalculate t,
+    -- orgtbl-send-table 'maybe)
+    require("org.table").recalc(0, post)
+    require("org.table.orgtbl").send_table(0, post, true)
+    return true, true
+  end
+  if el.type == "src-block" or el.type == "babel-call" then
+    return true, at_line(post, function()
+      return require("org.babel").ctrl_c_ctrl_c()
+    end)
+  end
+  if el.type == "dynamic-block" then
+    return true, at_line(post, function()
+      return require("org.dblock").update_at_cursor()
+    end)
+  end
+  if el.type == "plain-list" then
+    local arg = vim.v.count > 0 and (vim.v.count >= 16 and 16 or 4) or nil
+    return true, plain_list_action(post, arg)
+  end
+  utils.warn("C-c C-c can do nothing useful here")
+  return true, nil
+end
+
 --- C-c C-c
 function M.context_action()
   local sparse = require("org.agenda.sparse")
@@ -132,6 +225,14 @@ function M.context_action()
   local footnotes = require("org.footnotes")
   if footnotes.at_point() then
     return footnotes.action_at_point()
+  end
+  -- an affiliated keyword (#+NAME:, #+RESULTS:, #+CAPTION:, #+ATTR_...)
+  -- belongs to the element below it, which C-c C-c acts on
+  if line:match("^%s*#%+[^%s:]+:") then
+    local handled, r = affiliated_action(lnum)
+    if handled then
+      return r
+    end
   end
   -- a #+KEY: keyword line (not a block's #+begin_ line): its
   -- value holds no objects to act on
