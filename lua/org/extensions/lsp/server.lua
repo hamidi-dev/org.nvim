@@ -369,7 +369,9 @@ function M.cmd(dispatchers)
       if result == nil and not err then
         result = vim.NIL
       end
-      pcall(callback, err, err == nil and result or nil)
+      -- the id too: Neovim 0.12+ drops replies (inlay hints) whose
+      -- request_id isn't the one it is waiting for
+      pcall(callback, err, err == nil and result or nil, id)
       if notify_reply_callback then
         pcall(notify_reply_callback, id)
       end

@@ -174,6 +174,19 @@ describe("lsp extension: inlay hints and code lenses", function()
     }, labels(hints(buf)))
   end)
 
+  it("shows the hints through vim.lsp.inlay_hint", function()
+    local buf = open()
+    client_of(buf)
+    vim.lsp.inlay_hint.enable(true, { bufnr = buf })
+    local n = 0
+    vim.wait(2000, function()
+      n = #vim.lsp.inlay_hint.get({ bufnr = buf })
+      return n > 0
+    end, 10)
+    vim.lsp.inlay_hint.enable(false, { bufnr = buf })
+    eq(7, n)
+  end)
+
   it("puts a countdown after its timestamp", function()
     local buf = open()
     local h = hints(buf, 3, 3)[1]
