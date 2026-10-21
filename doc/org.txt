@@ -2409,7 +2409,8 @@ bar (Emacs shows them in the mode line).
         adds to the current ones; a count of 1 negates the whole filter;
         a count of 3 runs `agenda.auto_exclude_function`
   \     filter by one tag: its selection key (#+TAGS / `tags` `(k)`
-        keys), <Tab> to type a tag, <Space> any tag, `?` untagged, `.` the
+        keys of the files the view was built from, so a view restricted
+        to one file offers that file's keys), <Tab> to type a tag, <Space> any tag, `?` untagged, `.` the
         tags of the entry at point, `-` / `+` exclude / include the next
         tag, <CR> `auto_exclude_function`, `\` removes the tag filter,
         <Esc> quits (and `q`, unless a tag uses it as its key).
