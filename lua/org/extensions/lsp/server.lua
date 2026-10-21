@@ -29,6 +29,11 @@ function M.capabilities()
     renameProvider = on("rename") and { prepareProvider = true } or nil,
     foldingRangeProvider = on("folding") or nil,
     documentLinkProvider = on("document_links") and { resolveProvider = false } or nil,
+    completionProvider = on("completion") and { triggerCharacters = require("org.extensions.lsp.completion").TRIGGERS }
+      or nil,
+    documentFormattingProvider = on("formatting") or nil,
+    documentRangeFormattingProvider = on("formatting") or nil,
+    selectionRangeProvider = on("selection_range") or nil,
   }
   if on("code_actions") then
     caps.codeActionProvider = { codeActionKinds = { "quickfix", "refactor", "refactor.rewrite" } }
@@ -182,6 +187,22 @@ R["workspace/executeCommand"] = function(_, params)
     end
   end)
   return vim.NIL
+end
+
+R["textDocument/completion"] = function(_, params)
+  return require("org.extensions.lsp.completion").complete(doc_or_err(params), params.position)
+end
+
+R["textDocument/formatting"] = function(_, params)
+  return require("org.extensions.lsp.formatting").format(doc_or_err(params))
+end
+
+R["textDocument/rangeFormatting"] = function(_, params)
+  return require("org.extensions.lsp.formatting").format_range(doc_or_err(params), params.range)
+end
+
+R["textDocument/selectionRange"] = function(_, params)
+  return require("org.extensions.lsp.selection").ranges(doc_or_err(params), params.positions)
 end
 
 ---@type table<string, fun(srv: table, params: table)>

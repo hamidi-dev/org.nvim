@@ -36,6 +36,9 @@
 ---Code actions: `entry` commands (`false` or a list of `{ action, title }`)
 ---and line `conversions`. (default: both on)
 ---@field code_actions? { entry?: boolean|{ [1]: string, [2]: string }[], conversions?: boolean }
+---What formatting does: indent like `=`, align tables, realign tags.
+---(default: `{ indent = true, tables = true, tags = true }`)
+---@field formatting? { indent?: boolean, tables?: boolean, tags?: boolean }
 
 ---@class org.Config.Extensions.Lsp.Features
 ---@field document_symbols? boolean
@@ -48,6 +51,9 @@
 ---@field code_actions? boolean
 ---@field folding? boolean
 ---@field document_links? boolean
+---@field completion? boolean
+---@field formatting? boolean
+---@field selection_range? boolean
 
 ---@class org.Config.Extensions.Lsp.Diagnostics
 ---Milliseconds without changes before linting again. (default: `500`)

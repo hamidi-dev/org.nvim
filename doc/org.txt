@@ -11952,9 +11952,61 @@ What it does ~
   foldingRange     subtrees, blocks and drawers (for
                    `vim.lsp.foldexpr()`).
   documentLink     web links and links whose target resolves.
+  completion       the candidates of |org-completion|: `#+` keywords and
+                   their values (`#+STARTUP:`, `#+OPTIONS:`, src block
+                   languages and header arguments), TODO keywords,
+                   tags, property and drawer names, link types and
+                   targets (`[[*heading`, `[[#custom-id`) and
+                   `\entities`, each with a completion kind and the
+                   range it replaces. Trigger characters: `#` `+` `:`
+                   `[` `\` `*`.
+  formatting       |vim.lsp.buf.format()| (and rangeFormatting on a
+                   selection): indent like `=` (org-indent-region),
+                   align every table (org-table-align) and realign the
+                   tags of every headline. The edits are the smallest
+                   that do it, and an already formatted buffer gets
+                   none. `formatting` turns parts off.
+  selectionRange   grow the selection by syntax: the word, the objects
+                   around it (markup, links, timestamps, footnote
+                   references, targets, entities, cookies), the line,
+                   a block's or drawer's contents, the element, the
+                   elements containing it (item, list, ...), the
+                   section, the subtree, its parents' subtrees and the
+                   file. Neovim 0.12 and later use it for `an` and `in`
+                   in Visual mode (`vim.lsp.buf.selection_range()`).
 
-Completion is not provided: org.nvim's own completion (|org-completion|)
-already covers org buffers.
+Completion ~
+Neovim's built-in LSP completion then works in org buffers with no
+completion plugin. To pop up the menu as you type (after `:`, `#+`,
+`[[`, `\`):
+>lua
+    require("org").setup({
+      extensions = {
+        lsp = {
+          on_attach = function(client, bufnr)
+            vim.lsp.completion.enable(true, client.id, bufnr, { autotrigger = true })
+          end,
+        },
+      },
+    })
+<
+Without `autotrigger`, |i_CTRL-X_CTRL-O| (the LSP 'omnifunc') shows it.
+With blink.cmp or nvim-cmp and org.nvim's own source (|org-completion|)
+the candidates would be listed twice: keep one of them (turn the LSP one
+off with `features = { completion = false }`).
+
+Formatting ~
+conform.nvim's `lsp_format = "fallback"` and format on save
+(`vim.lsp.buf.format()` in a BufWritePre autocmd) use it. With
+`adapt_indentation` off (the default) indentation moves body text to
+column 0, as `=` does: set `formatting = { indent = false }` to keep
+yours and only align tables and tags. Src block code moves to
+`edit_src_content_indentation`, keeping its own layout; example, export
+and verse blocks keep their contents' relative indentation.
+`gq` keeps filling paragraphs (org's 'formatexpr', which the LSP client
+leaves alone). `vim.lsp.buf.format()` called from Visual mode (a
+mapping), or with a `range`, formats only those lines (the tables they
+touch are aligned whole).
 
 Rename ~
 |vim.lsp.buf.rename()| renames what is under the cursor and rewrites every
@@ -12049,8 +12101,11 @@ Options ~
   `on_attach`               `function(client, bufnr)`
   `features`                `{ document_symbols, workspace_symbols,
                             diagnostics, hover, definition, references,
-                            rename, code_actions, folding, document_links }`
+                            rename, code_actions, folding, document_links,
+                            completion, formatting, selection_range }`
                             (all true)
+  `formatting`              `{ indent = true, tables = true,
+                            tags = true }`
   `diagnostics`             `{ debounce = 500, max_lines = 3000,
                             checkers = nil (org-lint's default set),
                             exclude = {}, severity = { high = "Error",

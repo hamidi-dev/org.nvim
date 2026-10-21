@@ -6,7 +6,8 @@
 --- org-lint diagnostics, hover (timestamps, links, clocks, footnotes,
 --- headlines), go to definition, references, rename (headline titles,
 --- CUSTOM_ID, ID, targets, names, footnotes, with every link updated across
---- files), code actions, folding ranges and document links.
+--- files), code actions, folding ranges, document links, completion,
+--- formatting and selection ranges.
 ---
 --- ```lua
 --- require("org").setup({ extensions = { lsp = {} } })
@@ -44,7 +45,13 @@ M.defaults = {
     code_actions = true,
     folding = true,
     document_links = true,
+    completion = true,
+    formatting = true,
+    selection_range = true,
   },
+  --- What formatting (`vim.lsp.buf.format()`) does: indent like `=`
+  --- (org-indent-region), align tables and realign headline tags.
+  formatting = { indent = true, tables = true, tags = true },
   --- org-lint reports as diagnostics.
   diagnostics = {
     --- Milliseconds without changes before a buffer is linted again

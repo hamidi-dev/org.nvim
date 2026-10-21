@@ -395,8 +395,9 @@ end
 ---@param line string full line
 ---@param col integer 0-based cursor column (bytes)
 ---@param bufnr? integer
+---@param lnum? integer 1-based line of `line` (default: the cursor line)
 ---@return org.CompletionContext|nil
-function M.get(line, col, bufnr)
+function M.get(line, col, bufnr, lnum)
   local before = line:sub(1, col)
   bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
   local file = require("org.files").get_buffer(bufnr)
@@ -540,7 +541,7 @@ function M.get(line, col, bufnr)
   -- property drawer key / drawer names
   local prop_lead = before:match("^%s*:([^%s:]*)$")
   if prop_lead then
-    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    lnum = lnum or vim.api.nvim_win_get_cursor(0)[1]
     local property_keys = property_keys_at(file, lnum)
     local list = {}
     if property_keys then
