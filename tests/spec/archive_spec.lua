@@ -298,6 +298,26 @@ describe("archive", function()
     eq("* Task :a:", buf_lines()[1])
   end)
 
+  it("archiving to a sibling whose mark is gone doesn't fail", function()
+    config.setup({ tags_column = 0 })
+    org_buffer({ "* DONE A", "* Archive :ARCHIVE:" }, { 1, 0 })
+    local marks = require("org.marks")
+    local set = marks.set
+    marks.set = function(...)
+      local m = set(...)
+      if m then
+        m.lnum = function()
+          return nil
+        end
+      end
+      return m
+    end
+    local res, err = pcall(archive.archive_to_sibling)
+    marks.set = set
+    ok(res, err)
+    eq({ "* Archive :ARCHIVE:", "** DONE A" }, { buf_lines()[1], buf_lines()[2] })
+  end)
+
   it("archives to the Archive sibling", function()
     config.setup({ tags_column = 0 })
     org_buffer({ "* Project", "** DONE A", "   text", "** TODO B" }, { 2, 0 })
