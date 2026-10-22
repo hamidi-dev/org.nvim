@@ -146,8 +146,12 @@ M.actions = {
     M.exit()
   end,
   redo = function()
-    local count = vim.v.count
-    if count > 0 and M.state.view then
+    -- Vim never passes a count of 0 (a leading 0 is a motion), so `0 r`
+    -- (the TODO list's "(0)[ALL]") comes from its own key, which sets this
+    local zero = M.redo_zero_count
+    M.redo_zero_count = nil
+    local count = zero and 0 or vim.v.count
+    if (count > 0 or zero) and M.state.view then
       local names = todo_names()
       for _, b in ipairs(M.state.view.blocks) do
         if b.type == "todo" then

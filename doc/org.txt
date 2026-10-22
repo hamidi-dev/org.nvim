@@ -2176,8 +2176,10 @@ All configurable under `mappings.agenda`:
                   moon / sunrise and sunset / holidays
                   (|org-agenda-calendar-keys|; Emacs C M S H)
   r            rebuild the view; with a count N in a TODO list, the
-                  Nth keyword of the hint line (a count past the last
-                  one = ALL); with a count in a tags or search view, edit
+                  Nth keyword of the hint line (`0r`, or a count past
+                  the last one, = ALL: Vim reads a leading 0 as a motion,
+                  so the agenda maps `0r` itself); with a count in a tags
+                  or search view, edit
                   the query (Emacs C-u r)
   gr              rebuild all agenda buffers (Emacs g)
   <CR> <Tab>      open the entry here / in another window
