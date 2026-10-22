@@ -8,6 +8,12 @@ pull request, by its [Conventional Commits](https://www.conventionalcommits.org/
 This file is generated from the git history by `make changelog`
 (`scripts/changelog.lua`); edit the pull request titles, not this file.
 
+## [v2.15.0] - 2026-10-21
+
+### Features
+
+- Review batch — attachment export, more Babel languages, health, docs, tutor, CI and refactors ([#285](https://github.com/xheisenbugx/org.nvim/pull/285))
+
 ## [v2.14.4] - 2026-10-21
 
 ### Fixes
@@ -517,6 +523,7 @@ This file is generated from the git history by `make changelog`
 
 </details>
 
+[v2.15.0]: https://github.com/xheisenbugx/org.nvim/compare/v2.14.4...v2.15.0
 [v2.14.4]: https://github.com/xheisenbugx/org.nvim/compare/v2.14.3...v2.14.4
 [v2.14.3]: https://github.com/xheisenbugx/org.nvim/compare/v2.14.2...v2.14.3
 [v2.14.2]: https://github.com/xheisenbugx/org.nvim/compare/v2.14.1...v2.14.2
