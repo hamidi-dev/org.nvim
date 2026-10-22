@@ -125,6 +125,7 @@ local function get_session(bufnr, lang, args, name)
     cmd = cmd,
     cwd = block_cwd(bufnr, args),
     explicit = explicit,
+    args = args,
   })
 end
 
@@ -256,14 +257,15 @@ local function run_handler_session(handler, sess, lang, body, args, vars, done, 
         return { error = sres.error }
       end
     end
-    local cok, res = pcall(spec.convert, sres)
+    local cok, res = pcall(spec.convert, sres, sess)
     if not cok then
       utils.error(tostring(res))
       return { error = tostring(res), abort = true }
     end
     return { result = res, error = sres.error }
   end
-  local eopts = { timeout = require("org.config").opts.babel.timeout, echo_text = spec.echo, params = spec.params }
+  local eopts =
+    { timeout = require("org.config").opts.babel.timeout, echo_text = spec.echo, params = spec.params, args = args }
   if sync then
     return done(convert(session_mod.eval_sync(sess, spec.code, spec.mode, eopts)))
   end

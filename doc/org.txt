@@ -4892,12 +4892,13 @@ Sessions ~
 every block with the same language and name (no name = `default`), so
 variables, imports, functions and the working directory persist between
 blocks, like Emacs' comint sessions. Supported: shells (sh, bash, zsh,
-fish), python, js/node, ruby (irb), R, julia, ocaml, scheme and lua (lua
-sessions keep their globals inside Neovim). Other languages ignore
-`:session` with a warning.
+fish), python, js/node, ruby (irb), R, julia, ocaml, scheme, haskell
+(ghci), SQL (sqlite3, psql, mysql) and lua (lua sessions keep their
+globals inside Neovim). Other languages ignore `:session` with a warning.
   - The REPL runs in a terminal buffer named like Emacs: `*shell*`,
     `*Python*`, `*ruby*`, `*Javascript REPL*`, `*R*`, `*julia*`,
-    `*OCaml*`, `*scheme*` (`*lua*` for lua) for the default session, `*name*` for `:session name` (a name that
+    `*OCaml*`, `*scheme*`, `*ob-haskell*`, `*SQL*` (`*lua*` for lua)
+    for the default session, `*name*` for `:session name` (a name that
     already has earmuffs is used as is, so `:session *Python*` is the
     default python session). <prefix>bz (C-c C-v C-z) shows it; type into
     it (Insert mode) to use the REPL: what you define there is seen by
@@ -4915,14 +4916,18 @@ sessions keep their globals inside Neovim). Other languages ignore
     your own `.ocamlinit`); a scheme REPL `load`s a small program that
     evaluates the forms one by one in `(interaction-environment)`. julia,
     ocaml and scheme show the block's code in the REPL buffer before its
-    output. A line half-typed at the prompt is discarded (C-u) before a
-    block is sent.
+    output. ghci and the SQL clients read a file that prints the markers
+    itself (`:script`, `.read`, `\i`, `source`). A line half-typed at the
+    prompt is discarded (C-u) before a block is sent.
   - `:results value` is the value of the last expression, formatted like
     Emacs (python uses ob-python's `__org_babel_python_format_value`;
     R writes it as a tab-separated table like ob-R; julia writes it with
     CSV.jl as without a session; ocaml parses the toplevel's last
     `name : type = value` answer like ob-ocaml; scheme `write`s the last
-    form's value), or the returned value (lua); shells use their output unless `:results value` is explicit,
+    form's value; haskell keeps `it` after the last line in
+    `__LAST_VALUE_IMPROBABLE_NAME__` and prints it with `show`, quotes
+    removed, like ob-haskell; SQL blocks are tables as without a session,
+    see below), or the returned value (lua); shells use their output unless `:results value` is explicit,
     which gives the exit status. `:results output` is what the REPL
     printed, with stderr merged, prompts and the input echo left out.
   - The session starts in the block's `:dir`. Shells start without their
@@ -4937,9 +4942,29 @@ sessions keep their globals inside Neovim). Other languages ignore
     else `impl`): guile (`guile --no-auto-compile`), chez (`scheme`),
     chicken (`csi`), chibi, gambit (`gsi`), racket (`racket -i`) or mit
     (`mit-scheme --quiet`), or the command `session_commands` gives it.
-    One scheme session runs one implementation. A top-level
+    One scheme session runs one implementation. haskell runs the `cmd`
+    of `babel.languages.haskell` (ghci). A top-level
     `let`/`const` in a js session becomes `var`, so blocks can be
     evaluated again.
+  - haskell: a definition of several lines (a type signature and its
+    equations, an indented body) is sent between `:{` and `:}`; code
+    that has `:{` itself is sent as it is.
+  - SQL (`sqlite` blocks, and `sql` blocks with no `:engine` or
+    `:engine sqlite`, `postgresql`/`postgres` or `mysql`/`mariadb`)
+    keeps one client connected (sqlite3, psql, mysql), so temporary
+    tables, settings and variables last from one block to the next. The
+    block that starts the session gives the connection: `:db` (sqlite3),
+    `:dbhost`, `:dbport`, `:dbuser`, `:dbpassword`, `:database` and
+    `:cmdline` like the one-shot command line of ob-sql; later blocks
+    only send their code. Each block first sets the output format
+    (sqlite3 CSV with its `:colnames`, `:separator`, `:nullvalue` and
+    format headers; psql unaligned and tab-separated, `:colnames no` for
+    no header), so results are tables as without a session. A last
+    statement without `;` gets one. mysql runs in batch mode (`-B
+    --force`, with `--commands` for MySQL 9 clients); its `:colnames no`
+    is read when the session starts. Errors are printed in the result
+    and the session goes on. A `:session` with another engine is an
+    error.
   - <prefix>bl (C-c C-v C-l) runs the block in its session and shows it.
     <prefix>bK kills the session: the interpreter is stopped and its
     buffer wiped, like killing the session buffer in Emacs; wiping the
@@ -5324,7 +5349,8 @@ Not supported ~
   - `org-babel-load-file` for Emacs Lisp, and Emacs hook functions (hooks
     are `User` autocommands instead).
   - `:results xmp` (Ruby rcodetools),
-    Indium js sessions, and SQL sessions and `:dbconnection` (Emacs'
+    Indium js sessions, SQL sessions of engines other than sqlite3,
+    PostgreSQL and MySQL, and `:dbconnection` (Emacs'
     `sql-connection-alist`).
   - Attachment links for `:file` results inside the attachment directory
     (`attachment:` links) and `:dir 'attach`.
@@ -9050,8 +9076,11 @@ Differences from Emacs:
   C-u C-u C-u C-c C-w. Agenda archives-mode and view toggles (`va`, `v[`,
   ...) stay on until toggled off.
 - Babel sessions (|org-babel| Sessions) are live REPLs in terminal
-  buffers for shells, python, js/node, ruby (irb), R, julia, ocaml and
-  scheme; there are no sessions for SQL engines or other languages. Lua blocks run
+  buffers for shells, python, js/node, ruby (irb), R, julia, ocaml,
+  scheme, haskell (ghci) and SQL; other languages have none. Emacs has
+  no SQL sessions (ob-sql and ob-sqlite raise "not yet implemented"):
+  here sqlite3, psql and mysql keep one connection per `:session`,
+  opened with the headers of the block that starts it. Lua blocks run
   inside Neovim instead of an external `lua` unless the `cmd` of
   `babel.languages.lua` names one (lua sessions are a Neovim
   environment with a prompt buffer; in Neovim a table variable is a
@@ -9067,7 +9096,10 @@ Differences from Emacs:
   Emacs sends every block to `*OCaml*`); scheme sessions a plain REPL of
   the implementation, not Geiser: a block without `:session` runs in a
   new process (Emacs keeps one REPL per Org buffer), the default session
-  is `*scheme*` and `:host`/`:port` (geiser-connect) are not supported. Shells start without their rc
+  is `*scheme*` and `:host`/`:port` (geiser-connect) are not supported;
+  haskell sessions a plain ghci, not haskell-mode's inf-haskell, which
+  gets multi-line definitions between `:{` and `:}` where ob-haskell
+  sends the lines as they are. Shells start without their rc
   files and a shell session named `x` is the buffer `*x*` (Emacs names
   it `x`). The R session is a plain `R` console, not ESS (no
   `ess-ask-for-ess-directory`, graphics devices or `:results output

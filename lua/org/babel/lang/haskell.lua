@@ -3,8 +3,9 @@
 --- `:compile yes` compiles the body with ghc and runs it. Other blocks go
 --- to ghci like ob-haskell sends them to its inf-haskell session: the
 --- lines of the block, then a marker, and for a value `it` is kept in
---- `__LAST_VALUE_IMPROBABLE_NAME__` and printed. Each block runs in a new
---- ghci (Emacs keeps a session per `:session` name).
+--- `__LAST_VALUE_IMPROBABLE_NAME__` and printed. Without `:session` each
+--- block runs in a new ghci; with one, in that session's ghci
+--- (`M.session`).
 
 local ob = require("org.babel.ob")
 local lisp = require("org.babel.lisp")
@@ -162,6 +163,149 @@ function M.prepare(body, args, vars, ctx)
     end,
   }
 end
+
+---------------------------------------------------------------------------
+-- Sessions (org-babel-haskell-initiate-session)
+---------------------------------------------------------------------------
+
+local VALUE = "__LAST_VALUE_IMPROBABLE_NAME__"
+
+--- A Haskell string literal.
+local function hs_string(s)
+  return '"' .. s:gsub("\\", "\\\\"):gsub('"', '\\"') .. '"'
+end
+
+local function ident(l)
+  return l:match("^([%l_][%w_']*)")
+end
+
+--- `name :: type`
+local function is_signature(l)
+  return l:match("^[%l_][%w_']*%s*::") ~= nil
+end
+
+--- An equation: a `=` that is not part of `==`, `/=`, `<=`, `>=`, `=>`.
+local function is_equation(l)
+  local i = 1
+  while true do
+    local s = l:find("=", i, true)
+    if not s then
+      return false
+    end
+    local before, after = l:sub(s - 1, s - 1), l:sub(s + 1, s + 1)
+    if not before:match("[=<>/!:|&+%-*$.]") and not after:match("[=>]") then
+      return true
+    end
+    i = s + (after == "=" and 2 or 1)
+  end
+end
+
+--- The lines of `code` as ghci input: a line that starts at the first
+--- column begins a new input, unless it is another equation (or the
+--- signature) of the definition before; indented lines continue it.
+--- Inputs of several lines are put between `:{` and `:}`. Code that
+--- already uses `:{` is sent as it is.
+function M.ghci_lines(code)
+  local lines = vim.split(code, "\n", { plain = true })
+  for _, l in ipairs(lines) do
+    if l:match("^%s*:[{}]%s*$") then
+      return lines
+    end
+  end
+  local chunks, cur = {}, nil
+  for _, l in ipairs(lines) do
+    if l:match("^%s*$") then
+      if cur then
+        cur.lines[#cur.lines + 1] = l
+      end
+    elseif cur and l:match("^%s") then
+      cur.lines[#cur.lines + 1] = l
+    else
+      local name = ident(l)
+      local def = name ~= nil and name ~= "let" and (is_signature(l) or is_equation(l))
+      if cur and cur.def and def and cur.name == name then
+        cur.lines[#cur.lines + 1] = l
+      else
+        cur = { name = name, def = def, lines = { l } }
+        chunks[#chunks + 1] = cur
+      end
+    end
+  end
+  local out = {}
+  for _, c in ipairs(chunks) do
+    while #c.lines > 1 and c.lines[#c.lines]:match("^%s*$") do
+      c.lines[#c.lines] = nil
+    end
+    if #c.lines > 1 then
+      out[#out + 1] = ":{"
+      vim.list_extend(out, c.lines)
+      out[#out + 1] = ":}"
+    else
+      out[#out + 1] = c.lines[1]
+    end
+  end
+  return out
+end
+
+--- `:session`: one ghci per session (`*ob-haskell*` by default, like
+--- ob-haskell). The block is run with `:script`: the request file prints
+--- the markers with `putStrLn`, so the line typed at the prompt never
+--- contains them. For a value, `it` is kept in `__LAST_VALUE_IMPROBABLE_NAME__`
+--- and written with `show`, which is what ghci prints.
+M.session = {
+  family = "haskell",
+  repl = {
+    default = "ob-haskell",
+    argv = function(cmd)
+      return vim.deepcopy(cmd), {}
+    end,
+    line = function(_, _, src)
+      return ":script " .. src
+    end,
+    src = function(sess, req)
+      local session = require("org.babel.session")
+      local out = { string.format('putStrLn "%s %d"', session.BOS, req.id) }
+      if req.mode == "value" then
+        out[#out + 1] = VALUE .. "=()::()"
+      end
+      vim.list_extend(out, M.ghci_lines(req.code))
+      if req.mode == "value" then
+        out[#out + 1] = VALUE .. "=it"
+        out[#out + 1] = string.format("writeFile %s (show %s)", hs_string(sess.dir .. "/" .. req.id .. ".val"), VALUE)
+      end
+      out[#out + 1] = string.format('putStrLn "%s %d 0"', session.EOE, req.id)
+      return table.concat(out, "\n")
+    end,
+  },
+  command = function(_, o)
+    return o.cmd or "ghci -v0 -ignore-dot-ghci"
+  end,
+  prepare = function(body, args, vars)
+    local value = args.results_spec.collection == "value"
+    return {
+      code = ob.trim(M.expand(body, args, vars)),
+      mode = value and "value" or "output",
+      convert = function(res)
+        local text
+        if value then
+          text = res.value and strip_quotes(vim.trim(res.value)) or nil
+        else
+          text = M.parse(res.output or "", false)
+        end
+        return ob.result_cond(args, text, function(s)
+          if s == nil then
+            return nil
+          end
+          local ok, v = pcall(lisp.script_escape, s)
+          return ok and v or s
+        end)
+      end,
+    }
+  end,
+  var_code = function(vars)
+    return table.concat(var_lines(vars), "\n")
+  end,
+}
 
 ---------------------------------------------------------------------------
 -- org-babel-haskell-export-to-lhs

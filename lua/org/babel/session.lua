@@ -40,6 +40,14 @@
 --- `convert(res)` turns the session's answer (see `eval`) into the result.
 --- `echo` is text written to `<id>.echo`, which the REPL's helper may print
 --- before the begin marker so the code shows in the REPL buffer.
+--- `repl.argv(cmd, dir, opts, sess)` also gets the session (`opts.args`
+--- are the header arguments of the block that starts it). A REPL that
+--- cannot define a helper (ghci, SQL clients) has `repl.src(sess, req)`:
+--- the text of the request file, which prints the markers itself, while
+--- `line` only reads the file (`:script`, `.read`, `\i`).
+---
+--- Languages run by org.babel.langs rather than a port (sql, sqlite) have
+--- the same `session` table in `org.babel.session.<part>` (`SESSION_PARTS`).
 
 local M = {}
 
@@ -344,10 +352,19 @@ local KIND = { shell = "shell", fish = "shell", python = "repl", js = "repl", ru
 --- Files of a request in the session directory, removed when it ends.
 local REQUEST_FILES = { ".src", ".req", ".val", ".err", ".echo", ".run" }
 
---- The handler of a port of ob-LANG.el with session support, or nil.
+--- Languages of org.babel.langs whose `session` table is in
+--- `org.babel.session.<part>`.
+local SESSION_PARTS = { sql = "sql", sqlite = "sql" }
+
+--- The handler of a port of ob-LANG.el with session support (or of a
+--- language of `SESSION_PARTS`), or nil.
 function M.handler(lang)
   local h = require("org.babel.ob").get(lang)
-  return h and h.session and h or nil
+  if h then
+    return h.session and h or nil
+  end
+  local part = SESSION_PARTS[lang]
+  return part and require("org.babel.session." .. part).handler(lang) or nil
 end
 
 --- The session family of `lang`: the family of `org.babel.langs`, or the
@@ -592,7 +609,8 @@ function send_next(sess)
   local base = sess.dir .. "/" .. req.id
   local r = repl_of(sess.family)
   local src = base .. ".src"
-  vim.fn.writefile(vim.split(req.code, "\n", { plain = true }), src)
+  local text = r.src and r.src(sess, req) or req.code
+  vim.fn.writefile(vim.split(text, "\n", { plain = true }), src)
   local params = req.params or {}
   vim.fn.writefile(vim.list_extend({ req.mode, req.file or "" }, params), base .. ".req")
   if req.echo then
@@ -644,7 +662,7 @@ local function start_repl(sess, opts)
   local r = repl_of(sess.family)
   sess.dir = vim.fn.tempname()
   vim.fn.mkdir(sess.dir, "p")
-  local argv, env = r.argv(opts.cmd, sess.dir, opts)
+  local argv, env = r.argv(opts.cmd, sess.dir, opts, sess)
   if vim.fn.executable(argv[1]) == 0 then
     error("Executable not found: " .. argv[1], 0)
   end
@@ -691,6 +709,7 @@ end
 ---@field cmd? string[] the REPL command (none for a Lua session)
 ---@field cwd? string
 ---@field explicit? boolean `cmd` comes from a header argument (`:ruby`)
+---@field args? table header arguments of the block that starts it
 
 --- Start a session.
 ---@param opts org.babel.SessionOpts
@@ -748,7 +767,8 @@ end
 --- `opts.params` are the result params (python formats the value like
 --- Emacs), `opts.file` the graphics file.
 --- `opts.echo_text` is written to `<id>.echo` for the REPL helper to show.
----@param opts? { timeout?: integer, echo?: boolean, typed?: boolean, params?: string[], file?: string, echo_text?: string } `typed`: typed at the session's prompt
+--- `opts.args`: the block's header arguments (for a `repl.src`).
+---@param opts? { timeout?: integer, echo?: boolean, typed?: boolean, params?: string[], file?: string, echo_text?: string, args?: table } `typed`: typed at the session's prompt
 function M.eval(sess, code, mode, cb, opts)
   opts = opts or {}
   if sess.kind == "lua" then
@@ -786,6 +806,7 @@ function M.eval(sess, code, mode, cb, opts)
     params = opts.params,
     file = opts.file,
     echo = opts.echo_text,
+    args = opts.args,
   }
   local timeout = opts.timeout
   if timeout and timeout > 0 then
