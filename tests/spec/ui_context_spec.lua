@@ -99,6 +99,23 @@ describe("sticky headline context", function()
     eq({ 80 }, context.lines(win))
   end)
 
+  it("takes the headlines of the line under a full float", function()
+    local lines = { "* A", "** B", "*** C" }
+    for i = 4, 8 do
+      lines[i] = "c" .. i
+    end
+    lines[9] = "**** D"
+    for i = 10, 60 do
+      lines[i] = "d" .. i
+    end
+    org_buffer(lines, { 1, 0 })
+    context.enable()
+    -- top line 7 is under A, B, C; the line under three rows (10) is
+    -- also under D: the outermost goes
+    local win = scroll(7, 20)
+    eq({ 2, 3, 9 }, context.lines(win))
+  end)
+
   it("drops the outermost headlines past max_lines, or the innermost", function()
     local o = require("org.config").opts.ui.context
     o.max_lines = 2

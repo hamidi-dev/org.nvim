@@ -216,7 +216,9 @@ local function compute(win, parse)
       tried[n] = list
       local next_list = ancestors(file, line_below(top, n, last), foreign)
       local m = math.min(#next_list, max)
-      if m == n and next_list[#next_list] == list[#list] then
+      if m == n then
+        -- the same rows covered: the line under them decides
+        list = next_list
         break
       end
       if tried[m] then
