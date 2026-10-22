@@ -228,8 +228,30 @@ function M.refresh(srv, dispatchers)
   if f.inlay_hints ~= false and supports(srv, "inlayHint") then
     pcall(dispatchers.server_request, "workspace/inlayHint/refresh", vim.NIL)
   end
-  if f.code_lens ~= false and supports(srv, "codeLens") then
-    pcall(dispatchers.server_request, "workspace/codeLens/refresh", vim.NIL)
+  if f.code_lens ~= false then
+    if supports(srv, "codeLens") then
+      pcall(dispatchers.server_request, "workspace/codeLens/refresh", vim.NIL)
+    else
+      M.refresh_lenses()
+    end
+  end
+end
+
+--- Neovim 0.11 has no `workspace/codeLens/refresh`: ask again for the
+--- lenses of the org buffers that show some (those the user turned on
+--- with `vim.lsp.codelens.refresh()`), so a "Clock in" lens says "Clock out".
+function M.refresh_lenses()
+  -- the 0.11 API (get(bufnr), refresh()), deprecated in later versions
+  local cl = vim.lsp.codelens --[[@as table]]
+  if type(cl.refresh) ~= "function" or type(cl.get) ~= "function" then
+    return
+  end
+  for _, c in ipairs(vim.lsp.get_clients({ name = "org" })) do
+    for b in pairs(c.attached_buffers or {}) do
+      if vim.api.nvim_buf_is_loaded(b) and #cl.get(b) > 0 then
+        pcall(cl.refresh, { bufnr = b })
+      end
+    end
   end
 end
 

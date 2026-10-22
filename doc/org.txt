@@ -12265,7 +12265,9 @@ lines (each kind turned off on its own under `inlay_hints`):
                have efforts gets their sum, like column view's `{:}`.
 Hints follow the buffer as you type. When a clock starts or stops, the
 server asks the client to request hints and lenses again
-(`workspace/inlayHint/refresh`, `workspace/codeLens/refresh`).
+(`workspace/inlayHint/refresh`, `workspace/codeLens/refresh`). Neovim
+0.11 has no lens refresh request: there the lenses of the org buffers
+that show some are refreshed with `vim.lsp.codelens.refresh()`.
 
 Code lenses ~
 Lenses over the line they act on (`vim.lsp.codelens.enable()`, or

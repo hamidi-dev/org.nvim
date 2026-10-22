@@ -284,6 +284,19 @@ describe("lsp extension: inlay hints and code lenses", function()
         return vim.NIL
       end
     end
+    -- Neovim 0.11 has no workspace/codeLens/refresh: the server asks
+    -- vim.lsp.codelens.refresh() for the buffers showing lenses instead
+    local lens_refresh = vim.tbl_get(c.capabilities or {}, "workspace", "codeLens", "refreshSupport") == true
+    local cl = vim.lsp.codelens
+    local cl_get, cl_refresh = cl.get, cl.refresh
+    if not lens_refresh then
+      cl.get = function()
+        return { {} }
+      end
+      cl.refresh = function()
+        asked["workspace/codeLens/refresh"] = (asked["workspace/codeLens/refresh"] or 0) + 1
+      end
+    end
     local ok_run, err = pcall(function()
       c:exec_cmd(lens_at(resolved(buf), 7).command, { bufnr = buf })
       vim.wait(2000, function()
@@ -292,6 +305,7 @@ describe("lsp extension: inlay hints and code lenses", function()
       ok(require("org.clock").state, "clock running")
       eq(1, asked["workspace/inlayHint/refresh"])
       eq(1, asked["workspace/codeLens/refresh"])
+      cl.get, cl.refresh = cl_get, cl_refresh
       -- clocking in added a CLOCK line under Part A
       eq({ "2: Clock in", "7: Clock out", "24: Run block", "27: Update" }, titles(resolved(buf)))
       c:exec_cmd(lens_at(resolved(buf), 7).command, { bufnr = buf })
@@ -301,10 +315,36 @@ describe("lsp extension: inlay hints and code lenses", function()
       eq(nil, require("org.clock").state)
       eq("7: Clock in", titles(resolved(buf))[2])
     end)
+    cl.get, cl.refresh = cl_get, cl_refresh
     for m, h in pairs(saved) do
       vim.lsp.handlers[m] = h
     end
     ok(ok_run, err)
+  end)
+
+  it("refreshes the shown lenses itself for a client without codeLens/refresh", function()
+    local buf = open()
+    client_of(buf)
+    local cl = vim.lsp.codelens
+    local cl_get, cl_refresh = cl.get, cl.refresh
+    local sent, refreshed = {}, {}
+    cl.get = function(b)
+      return b == buf and { {} } or {}
+    end
+    cl.refresh = function(o)
+      refreshed[#refreshed + 1] = o.bufnr
+    end
+    local srv = { initialized = true, client_capabilities = { workspace = { inlayHint = { refreshSupport = true } } } }
+    local ok_run, err = pcall(require("org.extensions.lsp.inlay_hints").refresh, srv, {
+      server_request = function(m)
+        sent[#sent + 1] = m
+        return vim.NIL
+      end,
+    })
+    cl.get, cl.refresh = cl_get, cl_refresh
+    ok(ok_run, err)
+    eq({ "workspace/inlayHint/refresh" }, sent)
+    eq({ buf }, refreshed)
   end)
 
   it("unregisters the command when the extension is turned off", function()
