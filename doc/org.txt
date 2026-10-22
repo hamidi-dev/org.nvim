@@ -6693,7 +6693,8 @@ rest of it off: >lua
 The extension's `symbol_kinds` changes the kinds (for icons or filters).
 
 Breadcrumbs and sticky headings: nvim-treesitter-context needs a
-tree-sitter parser, so it can't keep the headlines above the screen in
+tree-sitter parser, so it shows nothing in org buffers; org.nvim's own
+sticky context (|org-context|) keeps the headlines above the screen in
 view. `api.symbol_path()` gives the headlines around the cursor cheaply
 enough for a 'winbar': >lua
     function _G.org_breadcrumbs()
@@ -6804,6 +6805,10 @@ Options under `ui`:
                          values from a floating list (|org-choice-list|);
                          "input": the command line with <Tab> completion
   imenu_depth            headline levels of `imenu` (gO), default 2
+  context                the sticky headline context (|org-context|):
+                         { enabled = false, max_lines = 3,
+                         trim_scope = "outer", line_numbers = true,
+                         zindex = 20 }
   conceal_links          show only link descriptions (conceallevel=2)
   hide_emphasis_markers  hide * / _ = ~ + around emphasized text
   hide_leading_stars     show only the last star of each headline
@@ -6885,6 +6890,45 @@ replaces built-in ones, for display, completion and export: >lua
       { "snowman", "\\diamond", true, "&#9731;", "[snow]", "[snow]", "☃" },
     }
 <
+Sticky headline context                                       *org-context*
+Like nvim-treesitter-context, a floating window over the top rows of an
+org window shows the headlines the first line on screen is under, so
+you know where you are in a long, deeply nested document. The lines are
+drawn as in the buffer: stars or bullets, TODO keywords, priorities,
+tags, concealed links. It is off by default, since it covers lines of
+the window; turn it on with `ui.context.enabled = true` or
+`:Org context_toggle`. Options under `ui.context`:
+  enabled       show it in every org window (false)
+  max_lines     most headlines shown (3); a window keeps at least one
+                line of its own
+  trim_scope    with more headlines than that, drop the "outer"
+                (outermost, default) or the "inner" ones
+  line_numbers  the headlines' line numbers in the gutter of windows with
+                'number' or 'relativenumber' (true)
+  zindex        of the floats (20)
+What counts is the line under the float: when the lines it covers end
+the entry, the context gets shorter. A closed fold is one line. Each
+window has its own context, which follows scrolling, resizing, folding
+and edits; it is closed when the window shows a buffer that isn't an org
+buffer, or closes. The cursor can be under the float, as with
+nvim-treesitter-context: a 'scrolloff' of at least `max_lines` keeps it
+in view. Set `vim.w.org_context` or `vim.b.org_context` to false to leave
+a window or a buffer without one.
+
+With nvim-treesitter-context installed nothing needs doing: it draws
+nothing in org buffers, which have no tree-sitter parser. When Neovim
+does have an `org` parser and nvim-treesitter-context is on, org buffers
+are left to it, so the two floats never cover each other
+(`vim.b.org_context = true` asks for org.nvim's).
+
+:Org context_toggle  Turn the sticky context on or off in every window.
+:Org context_goto    Go to the innermost headline of the context; with a
+                count, to the one that many levels out (|m'| is set).
+Neither has a default key; map them with `mappings.org`.
+Highlight groups: `OrgContext` (the float, linked to NormalFloat),
+`OrgContextLineNumber` (LineNr) and `OrgContextBottom` (its last line,
+underlined).
+
 :Org num_mode   Toggle headline numbering in the buffer (org-num-mode).
 :Org indent_mode  Toggle virtual indentation in the buffer
                 (org-indent-mode).
@@ -7205,6 +7249,8 @@ Highlight groups (all `default`, override with |nvim_set_hl()|):  *org-highlight
     `OrgHorizontalRule`, `OrgMacro`, `OrgHiddenStars`, `OrgSuperscript`,
     `OrgSubscript`, `OrgInlinetask`, `OrgSparseMatch`, `OrgBabelRunning`,
     `OrgBabelOutput`, `OrgCommandPreview`
+  - `OrgContext`, `OrgContextLineNumber`, `OrgContextBottom`
+    (|org-context|)
   - `OrgMenuKey`, `OrgMenuHeading`, `OrgMenuDesc`, `OrgMenuMore`,
     `OrgMenuOn`, `OrgMenuOff`, `OrgMenuValue`, `OrgMenuSelected` (|org-key-menus|,
     |org-choice-list|)

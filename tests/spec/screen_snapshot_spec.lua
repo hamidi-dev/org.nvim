@@ -416,6 +416,24 @@ describe("screen snapshot", function()
     screen:input("<C-c><C-k>")
   end)
 
+  it("the sticky headline context over a scrolled window (ui.context)", function()
+    new({ todo_keywords = { "TODO", "NEXT", "|", "DONE" }, ui = { context = { enabled = true } } }, 60, 10)
+    local lines = {
+      "* TODO [#A] Project :work:",
+      "** NEXT Design [[https://orgmode.org][spec]] :home:",
+      "*** DONE Sketch",
+    }
+    for i = 1, 20 do
+      lines[#lines + 1] = "Sketch note " .. i
+    end
+    lines[#lines + 1] = "** Review"
+    screen:org(lines, { cursor = { 12, 0 } })
+    screen:cmd("setlocal number")
+    screen:lua([[vim.fn.winrestview({ topline = 8 })]])
+    screen:lua([[require("org.ui.context").update_all(true)]])
+    screen:expect("context_sticky_headlines")
+  end)
+
   it("fails with a diff when the screen differs, and on a missing golden file", function()
     local dir, update = Screen.dir, vim.env.ORG_UPDATE_SNAPSHOTS
     Screen.dir = vim.fn.tempname()

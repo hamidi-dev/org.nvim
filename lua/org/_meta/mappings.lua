@@ -256,6 +256,8 @@
 ---| "next_link" # Next link
 ---| "next_sibling" # Next sibling heading
 ---| "num_mode" # Toggle headline numbering (org-num-mode)
+---| "context_toggle" # Toggle the sticky headline context
+---| "context_goto" # Go to a headline of the sticky context (count: levels)
 ---| "occur_link_in_agenda_files" # Find links to here in the agenda files
 ---| "odt_convert" # Convert a file with the ODT converter (count: open it)
 ---| "odt_export_as_odf" # Export a LaTeX fragment as an OpenDocument formula (.odf)

@@ -38,6 +38,23 @@ local defaults = {
     --- j/k and <CR> or a key; "input" = the command line with <Tab>
     --- completion, like Emacs's completing-read.
     choice_prompt = "float",
+    --- Sticky headline context, like nvim-treesitter-context: a float over
+    --- the top rows of each org window shows the headlines the first line
+    --- on screen is under. Toggle with context_toggle. See `:h org-context`.
+    context = {
+      --- Show it from the start (off by default: it covers screen lines).
+      enabled = false,
+      --- Most headlines shown; a window keeps at least one line of its own.
+      max_lines = 3,
+      --- With more headlines than max_lines: drop the "outer" (outermost)
+      --- or "inner" (innermost) ones.
+      trim_scope = "outer",
+      --- Show the headlines' line numbers where the window has 'number'
+      --- or 'relativenumber'.
+      line_numbers = true,
+      --- 'zindex' of the floats.
+      zindex = 20,
+    },
     --- Headline levels listed by `imenu` (gO) (org-imenu-depth).
     imenu_depth = 2,
     --- Conceal link brackets and show only descriptions (org-link-descriptive).

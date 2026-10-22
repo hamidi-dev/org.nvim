@@ -1043,6 +1043,23 @@
 ---(default: `nil`)
 ---@field notifier? fun(event: org.Config.Notifications.Event)
 
+---Sticky headline context (`:h org-context`).
+---@class org.Config.UI.Context
+---Show it from the start; `context_toggle` turns it on and off.
+---(default: `false`)
+---@field enabled? boolean
+---Most headlines shown; a window keeps at least one line of its own.
+---(default: `3`)
+---@field max_lines? integer
+---With more headlines than `max_lines`, drop the outermost (`"outer"`) or
+---the innermost (`"inner"`) ones. (default: `"outer"`)
+---@field trim_scope? "outer"|"inner"
+---Show the headlines' line numbers where the window has 'number' or
+---'relativenumber'. (default: `true`)
+---@field line_numbers? boolean
+---'zindex' of the floats. (default: `20`)
+---@field zindex? integer
+
 ---Buffer appearance.
 ---@class org.Config.UI
 ---The Org, Table, Agenda, Column, Edit-Formulas and OrgTbl menus, added
@@ -1054,6 +1071,9 @@
 ---`<Tab>` completion (Emacs `completing-read`).
 ---(default: `"float"`)
 ---@field choice_prompt? "float"|"input"
+---Sticky headline context: a float over the top rows of each org window
+---showing the headlines the first line on screen is under.
+---@field context? org.Config.UI.Context
 ---Headline levels listed by `imenu` (`gO`).
 ---(Emacs `org-imenu-depth`, default: `2`)
 ---@field imenu_depth? integer
