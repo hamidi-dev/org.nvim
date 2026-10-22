@@ -3125,12 +3125,12 @@ file+headline headlines and date tree nodes are created then, and the
 location is remembered even if the file changes (or the clock moves to
 another task) while you type. When the target is gone at the end (its
 headline was deleted), nothing is lost: the capture stays open.
-Like Emacs, the expanded template goes into the target buffer right away
-and is edited there, in a capture window that shows only the new entry
-(|org-capture-in-place|); with `unnarrowed`, the capture window shows the
-whole target file (see |org-capture-unnarrowed|). `capture.in_place =
-false` edits the text in a separate capture buffer instead, stored at the
-target when the capture is finished.
+By default the text is edited in a separate capture buffer and stored at
+the target when the capture is finished. With `capture.in_place = true`
+the expanded template goes into the target buffer right away and is
+edited there, like Emacs, in a capture window that shows only the new
+entry (|org-capture-in-place|); with `unnarrowed`, the capture window
+shows the whole target file (see |org-capture-unnarrowed|).
 
 Capture dates follow `extend_today_until` like Emacs: before that hour,
 %t %T %u %U and %<...> use 23:59 of the previous day and the date tree
@@ -3317,7 +3317,7 @@ without inserting a duplicate entry. Clock/bookmark finalization waits
 until the captured text is stored.
 
                                                     *org-capture-in-place*
-By default (`capture.in_place = true`) a capture inserts the expanded
+With `capture.in_place = true` (default false) a capture inserts the expanded
 template into the target buffer when it starts, like Emacs, and the
 capture window shows that buffer with everything but the new entry
 hidden, like Emacs's capture buffer narrowed to the inserted text: other
@@ -7678,7 +7678,7 @@ agenda ~
 capture ~
   templates {} (|org-capture-templates|; empty = Emacs's "t" Task
   template), templates_contexts {} (|org-capture-contexts|),
-  window "split", in_place true (|org-capture-in-place|),
+  window "split", in_place false (|org-capture-in-place|),
   use_agenda_date false (the global capture key in the agenda uses the
   date at point, like the agenda's `K`)
 refile ~
@@ -9095,15 +9095,16 @@ Differences from Emacs:
   visits every agenda file, so it updates them all, without saving).
 - Bulk action `f` and agenda skip functions take Lua instead of Elisp.
   Capture `%(sexp)` takes Emacs Lisp (see above) or a Lua expression.
-- Capture inserts the text into the target right away, like Emacs, but
-  Neovim has no indirect buffers nor narrowing: the capture window shows
+- By default capture edits the text in a separate buffer and stores it at
+  the target on finalize; Emacs inserts it into the target right away.
+  `capture.in_place = true` does that too, but Neovim has no indirect
+  buffers nor narrowing: the capture window shows
   the target buffer itself, with the lines outside the new entry hidden
   (`conceal_lines` in that window only) and the cursor kept inside it
   (|org-capture-in-place|). Undo in that window is the target buffer's
   undo, and `:w` writes the file instead of finishing the capture. A
   second capture into a file already being captured into in place uses a
-  separate capture buffer, which is what `capture.in_place = false` gives
-  every capture: the text is then stored at the target only on finalize. Mail and news `%:keyword` values (`%:from`,
+  separate capture buffer, as every capture gets by default. Mail and news `%:keyword` values (`%:from`,
   `%:subject`, ...) come from Emacs link sources (Gnus, mu4e, ...) that
   have no Neovim counterpart; only `%:link`, `%:description`,
   `%:annotation`, `%:initial` and `%:type` exist.

@@ -61,8 +61,7 @@ describe("capture hooks (org-capture-*-finalize-hook)", function()
         events[#events + 1] = { "tpl-after" }
       end,
     })
-    -- in place: the entry is in the target already, under the headline
-    vim.api.nvim_buf_set_text(buf, 1, 8, 1, 8, { "Hooked" })
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "* TODO Hooked" })
     local dbuf, dline = run(capture.finalize, buf, { jump = false })
     stop()
     local names = vim.tbl_map(function(e)

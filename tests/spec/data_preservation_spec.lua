@@ -34,14 +34,19 @@ describe("capture, archive and refile data preservation", function()
     vim.fn.delete(dir, "rf")
   end)
 
-  --- Run `fn` with captures edited in a separate buffer (capture.in_place = false).
-  local function separate_buffer(fn)
+  --- Run `fn` with capture.in_place set to `value`.
+  local function with_in_place(value, fn)
     local opts = require("org.config").opts.capture
     local was = opts.in_place
-    opts.in_place = false
+    opts.in_place = value
     local ok_, err = pcall(fn)
     opts.in_place = was
     assert(ok_, err)
+  end
+
+  --- Run `fn` with captures edited in a separate buffer (capture.in_place = false).
+  local function separate_buffer(fn)
+    with_in_place(false, fn)
   end
 
   local function file(name, lines, visible)
@@ -175,7 +180,10 @@ describe("capture, archive and refile data preservation", function()
   it("keeps an in-place capture open after a write failure and retries without duplication", function()
     local target, path = file("capture-in-place-readonly", { "* Inbox" }, true)
     vim.bo[target].readonly = true
-    local buf = run(capture.capture, { template = "* Precious", target = path, headline = "Inbox" })
+    local buf
+    with_in_place(true, function()
+      buf = run(capture.capture, { template = "* Precious", target = path, headline = "Inbox" })
+    end)
     eq(target, buf)
     pcall(capture.finalize, buf, { jump = false })
     ok(capture.sessions[buf], "write failure must keep the capture open")
@@ -279,7 +287,9 @@ describe("capture, archive and refile data preservation", function()
     eq({ "* Inbox", "* New" }, utils.readfile(path))
     eq(true, vim.bo[target].modified)
     -- in place, the file written mid-capture holds the entry as well
-    buf = run(capture.capture, { template = "* Note", target = path, headline = "Other" })
+    with_in_place(true, function()
+      buf = run(capture.capture, { template = "* Note", target = path, headline = "Other" })
+    end)
     eq(true, utils.save_buffer(target))
     capture.kill(buf)
     eq({ "* Inbox" }, buf_lines(target))

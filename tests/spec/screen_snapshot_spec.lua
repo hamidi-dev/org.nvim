@@ -396,7 +396,7 @@ describe("screen snapshot", function()
   end)
 
   it("an in-place capture: the capture window shows only the new entry, the file all of it", function()
-    new(nil, 72, 16, { year = 2026, month = 10, day = 21, hour = 9, min = 30 })
+    new({ capture = { in_place = true } }, 72, 16, { year = 2026, month = 10, day = 21, hour = 9, min = 30 })
     local path = screen:org({ "* Inbox", "** TODO Old task", "Notes about it.", "* Projects", "** Garden" })
     screen:lua(
       [[
