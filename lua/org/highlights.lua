@@ -190,6 +190,10 @@ local function defaults()
     OrgInlinetask = { link = "Comment" },
     -- org-warning, on the first star of inline tasks (inlinetask_show_first_star)
     OrgInlinetaskFirstStar = { link = first_existing({ "@comment.warning" }, "WarningMsg") },
+    -- the sticky headline context (org.ui.context)
+    OrgContext = { link = "NormalFloat" },
+    OrgContextLineNumber = { link = "LineNr" },
+    OrgContextBottom = { underline = true },
     -- key menus and choice lists (org.ui)
     OrgMenuKey = { link = "Special" },
     OrgMenuHeading = { link = "Title" },

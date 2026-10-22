@@ -192,7 +192,12 @@ describe("sidebar", function()
     local st = sidebar.open()
     ok(text(st):find("not clocked in", 1, true))
     sidebar.close()
-    date.now = real_now
+    -- the real time, frozen: a minute turning over between clocking in
+    -- and drawing would show 0:01
+    local frozen = real_now()
+    date.now = function()
+      return frozen:clone()
+    end
     local b = utils.load_buffer(path)
     vim.api.nvim_set_current_buf(b)
     vim.api.nvim_win_set_cursor(0, { 5, 0 })

@@ -578,6 +578,9 @@ local function emphasis_close(s, i)
   end
 end
 
+-- (for the mini.ai and flash.nvim adapters, org.integrations.regions)
+M.emphasis_close = emphasis_close
+
 --- Byte ranges the decorations never prettify: links, verbatim/code-like
 --- spans and plain URLs (like org.ui.decorations).
 local function protected_ranges(s)

@@ -66,6 +66,12 @@ local defaults = {
     make_description = nil,
     --- Server for doi: links (org-link-doi-server-url).
     doi_server_url = "https://doi.org/",
+    --- How `docview:FILE::PAGE` links open a document at a page
+    --- (org-docview-open): a command where `%s` is the file and `%p` the
+    --- page ("zathura --page=%p %s"), function(file, page), false (open
+    --- the file without a page) or nil (the first of zathura, okular,
+    --- evince, qpdfview, mupdf and SumatraPDF that is installed).
+    docview_command = nil,
     --- Functions tried first on a file search string: function(search) ->
     --- true when handled (org-execute-file-search-functions).
     search_functions = {},

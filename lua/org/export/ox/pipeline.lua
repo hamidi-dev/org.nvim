@@ -421,15 +421,20 @@ function export_as(backend, lines, opts)
   end
   info.options_filters = {}
   -- filters: back-end first, then user filters (config export.filters)
-  local filters = M.all_filters(backend)
-  for k, v in pairs(c.filters or {}) do
-    filters[k] = filters[k] or {}
-    vim.list_extend(filters[k], M.as_list(v))
-  end
-  -- also accept keys with underscores (plain_text) for hyphenated types
+  -- keys with underscores (parse_tree, plain_text) name the hyphenated
+  -- types; normalised before merging so they add to the back-end's
+  -- filters of that type instead of one list replacing the other
   local norm = {}
-  for k, v in pairs(filters) do
-    norm[k:gsub("_", "-")] = v
+  local function add(k, list)
+    k = k:gsub("_", "-")
+    norm[k] = norm[k] or {}
+    vim.list_extend(norm[k], list)
+  end
+  for k, v in pairs(M.all_filters(backend)) do
+    add(k, v)
+  end
+  for k, v in pairs(c.filters or {}) do
+    add(k, M.as_list(v))
   end
   info.filters = norm
   -- citations: bibliography and processor

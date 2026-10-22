@@ -982,6 +982,23 @@ vim.api.nvim_set_decoration_provider(ns, {
   end,
 })
 
+--- The decorations drawn on 0-based `row` of `bufnr`, as `{ col, opts }`
+--- pairs for `nvim_buf_set_extmark` (the sticky headline context copies
+--- them), from the per-changedtick cache. Empty when the buffer draws none.
+---@param bufnr integer
+---@param row integer
+---@return { [1]: integer, [2]: vim.api.keyset.set_extmark }[]
+function M.line_marks(bufnr, row)
+  if not attached[bufnr] then
+    return {}
+  end
+  local out = {}
+  for _, m in ipairs(rows_for(bufnr, row, row)[row] or {}) do
+    out[#out + 1] = { m[1], m[2] }
+  end
+  return out
+end
+
 --- Recompute on the next redraw (e.g. after `ui` options changed).
 function M.render(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then

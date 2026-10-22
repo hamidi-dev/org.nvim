@@ -482,6 +482,12 @@ function M.link_to_location(opts)
   if vim.bo[bufnr].filetype == "netrw" or vim.bo[bufnr].filetype == "oil" or (name ~= "" and utils.is_dir(name)) then
     return directory_link(bufnr, lnum)
   end
+  local scheme = name:match("^(%a[%w+.-]*)://")
+  if scheme and (scheme == "http" or scheme == "https" or scheme == "ftp") then
+    -- a web page read over the network (netrw's `:e https://...`): its
+    -- URL, like org-eww-store-link / org-w3m-store-link in a browser buffer
+    return finish({ link = name, desc = nil })
+  end
   if name == "" or bt ~= "" and bt ~= "acwrite" then
     return nil
   end

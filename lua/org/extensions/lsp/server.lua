@@ -29,6 +29,13 @@ function M.capabilities()
     renameProvider = on("rename") and { prepareProvider = true } or nil,
     foldingRangeProvider = on("folding") or nil,
     documentLinkProvider = on("document_links") and { resolveProvider = false } or nil,
+    completionProvider = on("completion") and { triggerCharacters = require("org.extensions.lsp.completion").TRIGGERS }
+      or nil,
+    documentFormattingProvider = on("formatting") or nil,
+    documentRangeFormattingProvider = on("formatting") or nil,
+    selectionRangeProvider = on("selection_range") or nil,
+    inlayHintProvider = on("inlay_hints") and { resolveProvider = false } or nil,
+    codeLensProvider = on("code_lens") and { resolveProvider = true } or nil,
   }
   if on("code_actions") then
     caps.codeActionProvider = { codeActionKinds = { "quickfix", "refactor", "refactor.rewrite" } }
@@ -184,6 +191,25 @@ R["workspace/executeCommand"] = function(_, params)
   return vim.NIL
 end
 
+R["textDocument/completion"] = function(_, params)
+  return require("org.extensions.lsp.completion").complete(doc_or_err(params), params.position)
+end
+
+R["textDocument/formatting"] = function(_, params)
+  return require("org.extensions.lsp.formatting").format(doc_or_err(params))
+end
+
+R["textDocument/rangeFormatting"] = function(_, params)
+  return require("org.extensions.lsp.formatting").format_range(doc_or_err(params), params.range)
+end
+
+R["textDocument/selectionRange"] = function(_, params)
+  return require("org.extensions.lsp.selection").ranges(doc_or_err(params), params.positions)
+end
+
+require("org.extensions.lsp.inlay_hints").register(R, doc_or_err)
+require("org.extensions.lsp.code_lens").register(R, doc_or_err)
+
 ---@type table<string, fun(srv: table, params: table)>
 M.notifications = {}
 local N = M.notifications
@@ -302,6 +328,8 @@ function M.cmd(dispatchers)
     end)
   end
 
+  require("org.extensions.lsp.inlay_hints").watch(srv, dispatchers)
+
   local function exit(code)
     if srv.closing then
       return
@@ -341,7 +369,9 @@ function M.cmd(dispatchers)
       if result == nil and not err then
         result = vim.NIL
       end
-      pcall(callback, err, err == nil and result or nil)
+      -- the id too: Neovim 0.12+ drops replies (inlay hints) whose
+      -- request_id isn't the one it is waiting for
+      pcall(callback, err, err == nil and result or nil, id)
       if notify_reply_callback then
         pcall(notify_reply_callback, id)
       end

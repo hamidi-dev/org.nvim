@@ -6,7 +6,9 @@
 --- org-lint diagnostics, hover (timestamps, links, clocks, footnotes,
 --- headlines), go to definition, references, rename (headline titles,
 --- CUSTOM_ID, ID, targets, names, footnotes, with every link updated across
---- files), code actions, folding ranges and document links.
+--- files), code actions, folding ranges, document links, completion,
+--- formatting, selection ranges, inlay hints (clock sums, deadline
+--- countdowns, effort) and code lenses.
 ---
 --- ```lua
 --- require("org").setup({ extensions = { lsp = {} } })
@@ -44,7 +46,15 @@ M.defaults = {
     code_actions = true,
     folding = true,
     document_links = true,
+    completion = true,
+    formatting = true,
+    selection_range = true,
+    inlay_hints = true,
+    code_lens = true,
   },
+  --- What formatting (`vim.lsp.buf.format()`) does: indent like `=`
+  --- (org-indent-region), align tables and realign headline tags.
+  formatting = { indent = true, tables = true, tags = true },
   --- org-lint reports as diagnostics.
   diagnostics = {
     --- Milliseconds without changes before a buffer is linted again
@@ -108,6 +118,30 @@ M.defaults = {
     --- Write the files a rename changed that were not loaded (Neovim
     --- loads them to apply the edit and would leave them modified).
     write_unloaded = true,
+  },
+  --- Inlay hints (`vim.lsp.inlay_hint.enable()`), each kind on its own.
+  inlay_hints = {
+    --- The time clocked in each subtree, over `clock_range`.
+    clock = true,
+    --- How far a DEADLINE or SCHEDULED date is ("in 3 d.", "2 d. ago").
+    countdowns = true,
+    --- Time clocked against the Effort (rolled up from the children).
+    effort = true,
+    --- A `:block` range for the clock sums; nil: `clock.display_default_range`.
+    ---@type string|nil
+    clock_range = nil,
+  },
+  --- Code lenses (`vim.lsp.codelens`).
+  code_lens = {
+    --- "Run block" on src blocks.
+    run_block = true,
+    --- "Update" on dynamic blocks.
+    dblock = true,
+    --- "Clock in" / "Clock out" on headlines: "todo" (headlines with a
+    --- TODO keyword that isn't done, and the clocked one), true (every
+    --- headline) or false.
+    ---@type boolean|"todo"
+    clock = "todo",
   },
   code_actions = {
     --- Entry commands (TODO, priority, schedule, deadline, refile,
@@ -236,6 +270,7 @@ function M.setup(o)
   vim.api.nvim_clear_autocmds({ group = augroup })
   local util = require(MOD .. ".util")
   util.invalidate()
+  require(MOD .. ".code_lens").register_command()
   -- a new org file on disk: list the workspace files again
   vim.api.nvim_create_autocmd("BufFilePost", {
     group = augroup,
@@ -289,6 +324,7 @@ function M.teardown()
   vim.api.nvim_clear_autocmds({ group = augroup })
   require("org.write_hooks").unregister("lsp")
   require(MOD .. ".rename").reset()
+  require(MOD .. ".code_lens").unregister_command()
   M.stop()
 end
 

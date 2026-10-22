@@ -738,6 +738,9 @@
 ---@field feed? org.Config.Feed
 ---org-mouse: context menus, dragging subtrees, clickable stars.
 ---@field mouse? org.Config.Mouse
+---Plugins that expect a tree-sitter parser: mini.ai, snacks.nvim's
+---scopes, flash.nvim (`:h org-integrations`).
+---@field integrations? org.Config.Integrations
 ---Links: abbreviations, custom types, following.
 ---@field links? org.Config.Links
 ---Downloading remote resources (a URL in `#+INCLUDE`): `"prompt"`, `"safe"`,
@@ -802,6 +805,8 @@
 ---@field literate? org.Config.Extensions.Literate|boolean
 ---An in-process language server for org buffers (`:h org-extensions-lsp`).
 ---@field lsp? org.Config.Extensions.Lsp|boolean
+---Language servers inside src blocks (`:h org-extensions-src-lsp`).
+---@field src_lsp? org.Config.Extensions.SrcLsp|boolean
 ---Live transclusion of `#+transclude:` keywords, like Emacs org-transclusion
 ---(`:h org-extensions-transclusion`; types in `_meta/transclusion.lua`).
 ---@field transclusion? org.Config.Extensions.Transclusion|boolean
@@ -955,6 +960,20 @@
 ---(Emacs `org-mouse-features`, default: all but `"move-tree"`)
 ---@field features? string[]
 
+---Plugins that expect a tree-sitter parser, given org.nvim's own structure
+---in org buffers when they are installed (`:h org-integrations`).
+---@class org.Config.Integrations
+---mini.ai: org text objects in `vim.b.miniai_config` of org buffers; a
+---table gives other letters (`{ block = "o", emphasis = false }`).
+---(default: `true`)
+---@field mini_ai? boolean|table<string, string|false>
+---snacks.nvim: `Snacks.scope` (its indent guides, `ii` / `ai`, `[i` / `]i`)
+---from org elements and subtrees. (default: `true`)
+---@field snacks_scope? boolean
+---flash.nvim: its tree-sitter jump labels org elements and subtrees.
+---(default: `true`)
+---@field flash? boolean
+
 ---Plain lists.
 ---@class org.Config.Lists
 ---Single-letter bullets `a.`, `A)` and counters `[@c]`.
@@ -1024,6 +1043,23 @@
 ---(default: `nil`)
 ---@field notifier? fun(event: org.Config.Notifications.Event)
 
+---Sticky headline context (`:h org-context`).
+---@class org.Config.UI.Context
+---Show it from the start; `context_toggle` turns it on and off.
+---(default: `false`)
+---@field enabled? boolean
+---Most headlines shown; a window keeps at least one line of its own.
+---(default: `3`)
+---@field max_lines? integer
+---With more headlines than `max_lines`, drop the outermost (`"outer"`) or
+---the innermost (`"inner"`) ones. (default: `"outer"`)
+---@field trim_scope? "outer"|"inner"
+---Show the headlines' line numbers where the window has 'number' or
+---'relativenumber'. (default: `true`)
+---@field line_numbers? boolean
+---'zindex' of the floats. (default: `20`)
+---@field zindex? integer
+
 ---Buffer appearance.
 ---@class org.Config.UI
 ---The Org, Table, Agenda, Column, Edit-Formulas and OrgTbl menus, added
@@ -1035,6 +1071,9 @@
 ---`<Tab>` completion (Emacs `completing-read`).
 ---(default: `"float"`)
 ---@field choice_prompt? "float"|"input"
+---Sticky headline context: a float over the top rows of each org window
+---showing the headlines the first line on screen is under.
+---@field context? org.Config.UI.Context
 ---Headline levels listed by `imenu` (`gO`).
 ---(Emacs `org-imenu-depth`, default: `2`)
 ---@field imenu_depth? integer

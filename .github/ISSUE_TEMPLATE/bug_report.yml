@@ -41,6 +41,7 @@ body:
         - review
         - roam
         - sidebar
+        - src_lsp
         - super_agenda
         - timeline
         - transclusion

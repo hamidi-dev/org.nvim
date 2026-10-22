@@ -23,6 +23,11 @@ local defaults = {
     --- Window of the capture buffer: "split" (Emacs splits the frame) |
     --- "float" | "vsplit" | "tab" | "current".
     window = "split",
+    --- true inserts the template into the target right away and edits it
+    --- there, in a window that shows only the new entry (like Emacs's
+    --- capture buffer narrowed to the inserted text). false (the default)
+    --- edits the text in a separate buffer stored at the target on finalize.
+    in_place = false,
     --- Capturing from the agenda (the global capture key) uses the date at
     --- point as the default date; with count 1 also the time of the item
     --- at point or the current time (org-capture-use-agenda-date). The

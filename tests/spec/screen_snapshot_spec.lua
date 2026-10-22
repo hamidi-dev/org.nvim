@@ -395,6 +395,49 @@ describe("screen snapshot", function()
     screen:input("<Esc>")
   end)
 
+  it("an in-place capture: the capture window shows only the new entry, the file all of it", function()
+    new({ capture = { in_place = true } }, 72, 16, { year = 2026, month = 10, day = 21, hour = 9, min = 30 })
+    if not screen:lua([[return require("org.capture").can_narrow()]]) then
+      -- the capture window shows the whole file there (capture_spec.lua)
+      error({ skip = "this Neovim can't hide lines in one window only" }, 0)
+    end
+    local path = screen:org({ "* Inbox", "** TODO Old task", "Notes about it.", "* Projects", "** Garden" })
+    screen:lua(
+      [[
+      local path = ...
+      require("org.utils").run(function()
+        require("org.capture").capture({ template = "* TODO %?\n%U", target = path, headline = "Inbox" })
+      end)
+    ]],
+      path
+    )
+    -- type in Insert mode, a second line with Enter, as a user does
+    for _, keys in ipairs({ "Buy milk", "<CR>", "two litres<Esc>" }) do
+      screen:input(keys)
+      screen:lua([[vim.wait(50)]])
+    end
+    screen:expect("capture_in_place")
+    screen:input("<C-c><C-k>")
+  end)
+
+  it("the sticky headline context over a scrolled window (ui.context)", function()
+    new({ todo_keywords = { "TODO", "NEXT", "|", "DONE" }, ui = { context = { enabled = true } } }, 60, 10)
+    local lines = {
+      "* TODO [#A] Project :work:",
+      "** NEXT Design [[https://orgmode.org][spec]] :home:",
+      "*** DONE Sketch",
+    }
+    for i = 1, 20 do
+      lines[#lines + 1] = "Sketch note " .. i
+    end
+    lines[#lines + 1] = "** Review"
+    screen:org(lines, { cursor = { 12, 0 } })
+    screen:cmd("setlocal number")
+    screen:lua([[vim.fn.winrestview({ topline = 8 })]])
+    screen:lua([[require("org.ui.context").update_all(true)]])
+    screen:expect("context_sticky_headlines")
+  end)
+
   it("fails with a diff when the screen differs, and on a missing golden file", function()
     local dir, update = Screen.dir, vim.env.ORG_UPDATE_SNAPSHOTS
     Screen.dir = vim.fn.tempname()

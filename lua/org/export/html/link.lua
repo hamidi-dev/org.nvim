@@ -121,6 +121,15 @@ M.url_encode = url_encode
 --- Resolve a search option of a file link to an anchor
 --- (org-publish-resolve-external-link).
 function M.resolve_external(option, path, info)
+  if path:lower():match("%.pdf$") then
+    -- Emacs searches a PDF's raw bytes as text, so `doc.pdf::5` aborts the
+    -- export or becomes #MissingReference; a page number becomes the
+    -- #page=N open parameter, any other option the anchor (org-differences)
+    if option:match("^%d+$") then
+      return "page=" .. option
+    end
+    return (option:gsub("^#", ""))
+  end
   local pub = require("org.export.publish")
   local r = pub.resolve_external_link(option, path, info)
   if r then

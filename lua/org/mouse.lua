@@ -26,8 +26,9 @@ end
 --- Follow the link under the cursor with the Emacs prefix `arg`; false
 --- when there is none. Runs the follow hook (OrgFollowLink).
 local function follow(arg)
-  -- org-mouse's activated stars, bullets and checkboxes
-  if require("org.org_mouse").open_at_point(true) then
+  -- org-mouse's activated stars, bullets and checkboxes (the module loads
+  -- only when it is on)
+  if (config.opts.mouse or {}).org_mouse == true and require("org.org_mouse").open_at_point(true) then
     return true
   end
   local links = require("org.links")

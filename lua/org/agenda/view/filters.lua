@@ -4,7 +4,6 @@
 
 local config = require("org.config")
 local date = require("org.date")
-local files = require("org.files")
 local utils = require("org.utils")
 local shared = require("org.agenda.view.shared")
 
@@ -16,6 +15,7 @@ local filter_tag_names = shared.filter_tag_names
 local item_key = shared.item_key
 local item_txt = shared.item_txt
 local join = shared.join
+local view_files = shared.view_files
 
 ---------------------------------------------------------------------------
 -- Filters (org-agenda-filter and friends)
@@ -138,7 +138,9 @@ function M.filter_by_tag(count)
   local accumulate = count == 2
   local keys = {}
   local chars = {}
-  for _, f in ipairs(files.agenda_files()) do
+  -- org-tag-alist-for-agenda: the tags of the files the view was built
+  -- from (a restricted view's file, a block's own files)
+  for _, f in ipairs(view_files()) do
     for _, d in ipairs(f:tag_definitions()) do
       if d.key and d.name and not keys[d.key] then
         keys[d.key] = d.name

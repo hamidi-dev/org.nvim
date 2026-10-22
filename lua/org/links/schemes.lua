@@ -18,6 +18,10 @@ local URL_SCHEMES = {
   info = true,
   irc = true,
   docview = true,
+  -- ol-eww and ol-w3m: Emacs browses the URL in eww / emacs-w3m; here
+  -- the system opener opens it like http:
+  eww = true,
+  w3m = true,
   bibtex = true,
   ["file+sys"] = true,
   ["file+emacs"] = true,

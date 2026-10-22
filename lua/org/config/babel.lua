@@ -144,7 +144,12 @@ local defaults = {
       ["C++"] = { cmd = "g++", ext = "cpp" },
       cpp = { cmd = "g++", ext = "cpp" },
       D = { cmd = "rdmd", ext = "d" },
-      awk = { cmd = "awk -f", ext = "awk" },
+      awk = { cmd = "awk", ext = "awk" }, -- org-babel-awk-command (ob-awk adds -f)
+      -- the result is the body itself (ob-css, ob-makefile)
+      css = {},
+      makefile = {},
+      -- the body as Org, $NAME replaced; :results latex/html/ascii export it
+      org = { default_header_args = { results = "raw silent", exports = "code" } },
       -- ports of ob-LANG.el (see |org-babel-languages|); the other keys are
       -- that file's options
       plantuml = {
@@ -219,9 +224,10 @@ local defaults = {
         location = "screen",
       },
       -- impl: the implementation without a :scheme header (Geiser's
-      -- default); commands: implementation -> command; null_to:
+      -- default); commands: implementation -> command; session_commands:
+      -- implementation -> REPL of a :session; null_to:
       -- org-babel-scheme-null-to
-      scheme = { impl = "guile", commands = {}, null_to = "hline" },
+      scheme = { impl = "guile", commands = {}, session_commands = {}, null_to = "hline" },
       julia = { cmd = "julia" }, -- org-babel-julia-command
       -- org-babel-latex-*: preamble, begin_env and end_env are strings or
       -- functions(header_args) returning one; htlatex, htlatex_packages;

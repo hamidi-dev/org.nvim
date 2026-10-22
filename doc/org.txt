@@ -444,6 +444,9 @@ org.nvim picker ~
 
 org.nvim external tools ~
 - pandoc, makeinfo and the LaTeX compiler for export
+- the document viewer `docview:FILE::PAGE` links open a page with
+  (`links.docview_command`): a warning only when the option names a
+  program that isn't installed
 - the interpreter of each Babel language (|org-babel-languages|)
 - the desktop notifier of reminders
 - gpg (`crypt.gpg_program`) for |org-crypt|: a warning only with
@@ -2409,7 +2412,8 @@ bar (Emacs shows them in the mode line).
         adds to the current ones; a count of 1 negates the whole filter;
         a count of 3 runs `agenda.auto_exclude_function`
   \     filter by one tag: its selection key (#+TAGS / `tags` `(k)`
-        keys), <Tab> to type a tag, <Space> any tag, `?` untagged, `.` the
+        keys of the files the view was built from, so a view restricted
+        to one file offers that file's keys), <Tab> to type a tag, <Space> any tag, `?` untagged, `.` the
         tags of the entry at point, `-` / `+` exclude / include the next
         tag, <CR> `auto_exclude_function`, `\` removes the tag filter,
         <Esc> quits (and `q`, unless a tag uses it as its key).
@@ -3120,9 +3124,13 @@ The target is resolved when the capture starts, like Emacs: missing
 file+headline headlines and date tree nodes are created then, and the
 location is remembered even if the file changes (or the clock moves to
 another task) while you type. When the target is gone at the end (its
-headline was deleted), nothing is lost: the capture buffer stays open.
-With `unnarrowed`, the text is inserted into the target right away and
-the capture window shows the whole target file (see |org-capture-unnarrowed|).
+headline was deleted), nothing is lost: the capture stays open.
+By default the text is edited in a separate capture buffer and stored at
+the target when the capture is finished. With `capture.in_place = true`
+the expanded template goes into the target buffer right away and is
+edited there, like Emacs, in a capture window that shows only the new
+entry (|org-capture-in-place|); with `unnarrowed`, the capture window
+shows the whole target file (see |org-capture-unnarrowed|).
 
 Capture dates follow `extend_today_until` like Emacs: before that hour,
 %t %T %u %U and %<...> use 23:59 of the previous day and the date tree
@@ -3213,7 +3221,8 @@ Template fields:
   allow_empty        finishing with no text still saves the target (by
                      default an empty capture is refused)
   hook               function(capture_bufnr) run when the capture window
-                     opens (not with immediate_finish)
+                     opens (not with immediate_finish); in place, the
+                     target buffer
   prepare_finalize   function(capture_bufnr), before the text is read
   before_finalize    function(bufnr, lnum) in the target, before saving
   after_finalize     function(bufnr, lnum) when the capture is done
@@ -3291,8 +3300,8 @@ of your Emacs session exists there, and it cannot prompt: no
 interpreter knows but that compiles as Lua is a Lua expression (the older
 org.nvim syntax); Lisp is tried when the Lua fails.
 
-Capture window: `<C-c><C-c>` or `:w` finalizes (with a count, C-u C-c C-c,
-it then jumps to the entry), `<C-c><C-k>` aborts (unchanged text created
+Capture window: `<C-c><C-c>` finalizes (with a count, C-u C-c C-c, it
+then jumps to the entry; in a separate capture buffer, `:w` does too), `<C-c><C-k>` aborts (unchanged text created
 for the target is dropped, preserving unrelated edits and generated
 headings with user-added content) and `<C-c><C-w>` finalizes and
 refiles the entry (entry templates only; also `<prefix>w`, `<prefix>k`,
@@ -3306,6 +3315,27 @@ mode as usual). The window splits the screen like Emacs (`capture.window`:
 If saving the target fails, the capture stays open and can be retried
 without inserting a duplicate entry. Clock/bookmark finalization waits
 until the captured text is stored.
+
+                                                    *org-capture-in-place*
+With `capture.in_place = true` (default false) a capture inserts the expanded
+template into the target buffer when it starts, like Emacs, and the
+capture window shows that buffer with everything but the new entry
+hidden, like Emacs's capture buffer narrowed to the inserted text: other
+windows showing the file see the entry appear and grow as you type. The
+cursor stays inside the entry, and lines added at its end (`o` on its
+last line) belong to it. `<C-c><C-c>` saves the file, `<C-c><C-k>`
+removes exactly the lines the capture inserted (as edited since) and
+the headlines created for it, keeping other edits, and gives the buffer
+back its modified state; `<C-c><C-w>` finalizes and refiles. `:w` just
+writes the file, with the entry in it. All template types, date trees,
+`prepend`, `kill_buffer` and `clock_in` work as with a capture buffer;
+`immediate_finish` opens no window either way. A second capture into a
+file that a capture is editing in place gets a separate capture buffer.
+Hiding the rest of the file needs `conceal_lines` in window-scoped
+namespaces, which Neovim 0.12.3+ draws in that window only (older
+versions hide some lines in the other windows on the file too); there the
+capture window shows the whole file, as with `unnarrowed`. Closing the capture window ends the capture and
+leaves the text in the (unsaved) buffer.
 
                                                     *org-capture-unnarrowed*
 An `unnarrowed` capture inserts the expanded template into the target
@@ -3724,7 +3754,20 @@ every link in full.
 
 Targets:
   https://… http://… ftp:… mailto:…   opened with |vim.ui.open()|
+  news:… irc:…                        (the system's handler)
+  eww:URL  w3m:URL                    URL opened with |vim.ui.open()|
+                                      (Emacs browses it in eww / w3m)
   doi:10.1000/x                       `links.doi_server_url` + path
+  docview:FILE::PAGE                  the document at page PAGE, with
+                                      `links.docview_command` (a command
+                                      with `%s` = file, `%p` = page, a
+                                      function(file, page), or false);
+                                      unset, the first installed of
+                                      zathura, okular, evince, qpdfview,
+                                      mupdf, SumatraPDF. Without a page,
+                                      or a viewer, it opens like file:
+                                      (macOS Preview can't go to a page:
+                                      install zathura or set the option)
   file:path  ./rel  ~/p  /abs         open a file; add a search option:
                                       `::42`, `::*Heading`, `::#custom-id`,
                                       `::(coderef)`, `::/regexp/`,
@@ -4850,10 +4893,12 @@ Sessions ~
 every block with the same language and name (no name = `default`), so
 variables, imports, functions and the working directory persist between
 blocks, like Emacs' comint sessions. Supported: shells (sh, bash, zsh,
-fish), python, js/node, ruby (irb), R and lua (lua sessions keep their
+fish), python, js/node, ruby (irb), R, julia, ocaml, scheme, haskell
+(ghci), SQL (sqlite3, psql, mysql) and lua (lua sessions keep their
 globals inside Neovim). Other languages ignore `:session` with a warning.
   - The REPL runs in a terminal buffer named like Emacs: `*shell*`,
-    `*Python*`, `*ruby*`, `*Javascript REPL*`, `*R*` (`*lua*` for lua)
+    `*Python*`, `*ruby*`, `*Javascript REPL*`, `*R*`, `*julia*`,
+    `*OCaml*`, `*scheme*`, `*ob-haskell*`, `*SQL*` (`*lua*` for lua)
     for the default session, `*name*` for `:session name` (a name that
     already has earmuffs is used as is, so `:session *Python*` is the
     default python session). <prefix>bz (C-c C-v C-z) shows it; type into
@@ -4866,12 +4911,24 @@ globals inside Neovim). Other languages ignore `:session` with a warning.
     between them. Shells `.` (source) the file, so `cd`, variables and
     functions stay. python, ruby, node and R define a small helper at
     start-up that evaluates the file in the REPL's global scope (irb's own
-    binding, so irb locals are shared). A line half-typed at the prompt is
-    discarded (C-u) before a block is sent.
+    binding, so irb locals are shared). julia's helper (loaded with
+    `julia -L`) runs the file in `Main`; the OCaml toplevel reads it with
+    `#use` (the helpers come from an `-init` file, which first `#use`s
+    your own `.ocamlinit`); a scheme REPL `load`s a small program that
+    evaluates the forms one by one in `(interaction-environment)`. julia,
+    ocaml and scheme show the block's code in the REPL buffer before its
+    output. ghci and the SQL clients read a file that prints the markers
+    itself (`:script`, `.read`, `\i`, `source`). A line half-typed at the
+    prompt is discarded (C-u) before a block is sent.
   - `:results value` is the value of the last expression, formatted like
     Emacs (python uses ob-python's `__org_babel_python_format_value`;
-    R writes it as a tab-separated table like ob-R), or the returned value
-    (lua); shells use their output unless `:results value` is explicit,
+    R writes it as a tab-separated table like ob-R; julia writes it with
+    CSV.jl as without a session; ocaml parses the toplevel's last
+    `name : type = value` answer like ob-ocaml; scheme `write`s the last
+    form's value; haskell keeps `it` after the last line in
+    `__LAST_VALUE_IMPROBABLE_NAME__` and prints it with `show`, quotes
+    removed, like ob-haskell; SQL blocks are tables as without a session,
+    see below), or the returned value (lua); shells use their output unless `:results value` is explicit,
     which gives the exit status. `:results output` is what the REPL
     printed, with stderr merged, prompts and the input echo left out.
   - The session starts in the block's `:dir`. Shells start without their
@@ -4879,9 +4936,36 @@ globals inside Neovim). Other languages ignore `:session` with a warning.
     predictable prompt; python runs `python3 -i` (your PYTHONSTARTUP is
     still loaded), ruby runs `irb` next to the configured `ruby` (a `:ruby`
     header argument is the REPL command itself, like Emacs), js runs a
-    node REPL, R runs `R` next to the configured `Rscript`. A top-level
+    node REPL, R runs `R` next to the configured `Rscript`, julia runs
+    `julia -i --banner=no --color=no --history-file=no` (`cmd`; a
+    `session_cmd` is used as it is), ocaml runs `cmd` (`ocaml`, or
+    `session_cmd`) and scheme the REPL of its implementation (`:scheme`,
+    else `impl`): guile (`guile --no-auto-compile`), chez (`scheme`),
+    chicken (`csi`), chibi, gambit (`gsi`), racket (`racket -i`) or mit
+    (`mit-scheme --quiet`), or the command `session_commands` gives it.
+    One scheme session runs one implementation. haskell runs the `cmd`
+    of `babel.languages.haskell` (ghci). A top-level
     `let`/`const` in a js session becomes `var`, so blocks can be
     evaluated again.
+  - haskell: a definition of several lines (a type signature and its
+    equations, an indented body) is sent between `:{` and `:}`; code
+    that has `:{` itself is sent as it is.
+  - SQL (`sqlite` blocks, and `sql` blocks with no `:engine` or
+    `:engine sqlite`, `postgresql`/`postgres` or `mysql`/`mariadb`)
+    keeps one client connected (sqlite3, psql, mysql), so temporary
+    tables, settings and variables last from one block to the next. The
+    block that starts the session gives the connection: `:db` (sqlite3),
+    `:dbhost`, `:dbport`, `:dbuser`, `:dbpassword`, `:database` and
+    `:cmdline` like the one-shot command line of ob-sql; later blocks
+    only send their code. Each block first sets the output format
+    (sqlite3 CSV with its `:colnames`, `:separator`, `:nullvalue` and
+    format headers; psql unaligned and tab-separated, `:colnames no` for
+    no header), so results are tables as without a session. A last
+    statement without `;` gets one. mysql runs in batch mode (`-B
+    --force`, with `--commands` for MySQL 9 clients); its `:colnames no`
+    is read when the session starts. Errors are printed in the result
+    and the session goes on. A `:session` with another engine is an
+    error.
   - <prefix>bl (C-c C-v C-l) runs the block in its session and shows it.
     <prefix>bK kills the session: the interpreter is stopped and its
     buffer wiped, like killing the session buffer in Emacs; wiping the
@@ -4908,7 +4992,7 @@ Languages ~
 default_header_args = {...} }`. `default_header_args` are that language's
 defaults (Emacs `org-babel-default-header-args:LANG`). Emacs enables only
 emacs-lisp (`org-babel-load-languages`); the plugin enables shells, python,
-lua, js/ts, ruby, perl, php, R, go, rust, sqlite, sql, C, C++/cpp, D and awk
+lua, js/ts, ruby, perl, php, R, go, rust, sqlite, sql, C, C++/cpp and D
 as well, and the ports of |org-babel-languages|. `:python`, `:ruby` and
 `:cmd` (js) choose the interpreter of one block, like Emacs.
   - emacs-lisp (elisp): run in a separate Emacs, `emacs -Q --batch`
@@ -4942,7 +5026,9 @@ as well, and the ports of |org-babel-languages|. `:python`, `:ruby` and
     returned values. `lua = { cmd = "lua" }` (or luajit, ...) runs lua
     blocks in that interpreter like ob-lua instead of inside Neovim.
     `python = { session_cmd = "ipython -i" }` starts sessions with that
-    command as it is (org-babel-python-command-session).
+    command as it is (org-babel-python-command-session); `session_cmd`
+    of julia and ocaml, and `scheme = { session_commands = { guile =
+    "guile -q" } }`, likewise name the REPL of their sessions.
   - Shells: `babel.shell_names` (org-babel-shell-names: sh bash zsh fish
     csh ash dash ksh mksh posh) run like sh, as the program of that name;
     `babel.shell_results_defaults_to_output = false` makes a block
@@ -5028,6 +5114,14 @@ runs. C-c C-v v shows the body as the Emacs expand function makes it.
   - forth: the lines run in gforth (`cmd`); `:results output` gives what
     each line printed, the default the last line's (`:session none` is an
     error like Emacs).
+  - awk: `cmd -f SCRIPT :cmd-line -v NAME='VALUE'... :in-file` (`cmd`
+    "awk"); a table variable is passed tab-separated, a list one element
+    per line; `:stdin ref` feeds a value the same way.
+  - css, makefile: the body is the result; nothing runs.
+  - org: the body is raw Org with `$NAME` replaced by `:var NAME`;
+    `:results latex`, `html` or `ascii` give its body-only export. The
+    defaults are `:results raw silent` and `:exports code`, so add
+    `:results replace` to insert it.
 
 Header arguments ~
 Header arguments merge like Emacs: `babel.default_header_args` (inline
@@ -5256,7 +5350,8 @@ Not supported ~
   - `org-babel-load-file` for Emacs Lisp, and Emacs hook functions (hooks
     are `User` autocommands instead).
   - `:results xmp` (Ruby rcodetools),
-    Indium js sessions, and SQL sessions and `:dbconnection` (Emacs'
+    Indium js sessions, SQL sessions of engines other than sqlite3,
+    PostgreSQL and MySQL, and `:dbconnection` (Emacs'
     `sql-connection-alist`).
   - Attachment links for `:file` results inside the attachment directory
     (`attachment:` links) and `:dir 'attach`.
@@ -5680,6 +5775,8 @@ are Lua functions: >lua
       },
     }
 <
+A key may be written with underscores (`parse_tree`, `plain_text`,
+`final_output`); the filters run after the back-end's own of that type.
 Back-ends ~                                              *org-export-backends*
 HTML          ox-html: XHTML strict by default (`#+HTML_DOCTYPE: html5`,
               `html5-fancy:t`), default CSS, MathJax, postamble "auto"
@@ -6597,7 +6694,8 @@ rest of it off: >lua
 The extension's `symbol_kinds` changes the kinds (for icons or filters).
 
 Breadcrumbs and sticky headings: nvim-treesitter-context needs a
-tree-sitter parser, so it can't keep the headlines above the screen in
+tree-sitter parser, so it shows nothing in org buffers; org.nvim's own
+sticky context (|org-context|) keeps the headlines above the screen in
 view. `api.symbol_path()` gives the headlines around the cursor cheaply
 enough for a 'winbar': >lua
     function _G.org_breadcrumbs()
@@ -6627,6 +6725,78 @@ captures:
 Folding needs no helper: org.nvim folds org buffers itself (|org-folding|),
 and the `lsp` extension also answers `textDocument/foldingRange`.
 
+Text objects, scopes and jumps ~
+                                                    *org-integrations-ts*
+mini.ai, snacks.nvim's scopes and flash.nvim's tree-sitter jump ask
+tree-sitter for the nodes around the cursor. In org buffers they get
+org.nvim's structure instead: the headline subtrees, the elements around
+the cursor (|org-elements|: blocks, drawers, lists and items, tables,
+paragraphs, ...) and the links, timestamps and emphasis on its line.
+When an org buffer is set up and the plugin is loaded (or lazy.nvim
+loads it later), org.nvim hooks itself in; nothing to configure, and a
+plugin that isn't installed is never loaded. `integrations` in `setup()`
+turns each one off: >lua
+    require("org").setup({
+      integrations = { mini_ai = true, snacks_scope = true, flash = true },
+    })
+<
+                                               *org-integrations-mini-ai*
+mini.ai: org buffers get these `custom_textobjects` (in
+`vim.b.miniai_config`, kept with any the buffer already has):
+  `h`  the headline and its section, up to the first child (`ih`: the
+       section without the headline line)
+  `r`  the subtree (`ir`: below the headline line)
+  `e`  the element at the cursor (`ie`: a block's or drawer's contents)
+  `B`  a `#+BEGIN_`..`#+END_` or dynamic block (`iB`: its contents;
+       mini.ai's `b` stays the brackets)
+  `-`  a list item and its children (`i-`: its text after the bullet
+       and checkbox, charwise)
+  `T`  a table (`#+TBLFM:` lines included)
+  `L`  a link (`iL`: its description)
+  `d`  a timestamp or range (`id`: inside its brackets)
+  `m`  emphasis: *bold*, /italic/, _underline_, +strike+, =verbatim=,
+       ~code~ (`im`: the text inside the markers)
+The letters follow org.nvim's own text objects (|org-textobj|), whose
+buffer keys (`ah`, `ir`, ...) stay first; mini.ai adds the "next" and
+"last" variants (`anB`, `ilL`), its counts and its `g[` / `g]` motions.
+A table instead of `true` gives other letters, `false` leaves one out: >lua
+    integrations = { mini_ai = { block = "o", emphasis = false } }
+<With the option off, add them to mini.ai yourself, for example only for
+org buffers: >lua
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = "org",
+      callback = function()
+        vim.b.miniai_config = {
+          custom_textobjects = require("org.integrations.mini_ai").spec({ block = "o" }),
+        }
+      end,
+    })
+<
+                                          *org-integrations-snacks-scope*
+snacks.nvim: `Snacks.scope` has no way to plug in another source, so
+org.nvim wraps `Snacks.scope.get` for org buffers (other buffers are
+left to snacks). The scope at the cursor is the innermost element of
+two lines or more (snacks' `min_size`), then each enclosing element and
+subtree, so `Snacks.indent`'s scope guide, the `ii` / `ai` text objects
+and the `[i` / `]i` jumps follow the org structure. `ai` takes the whole
+block, item or subtree; `ii` its contents (inside the `#+BEGIN` and
+`#+END` lines, below the headline or the item's first line); repeating
+them in Visual mode grows the selection. The guide is drawn at the
+element's indentation, so it shows only beside indented lines. Nothing
+to set up beyond snacks' own: >lua
+    require("snacks").setup({ indent = { enabled = true }, scope = { enabled = true } })
+<
+                                                 *org-integrations-flash*
+flash.nvim: in org windows, flash's tree-sitter jump labels the
+emphasis, link or timestamp at the cursor, the elements around it and
+the subtrees; a label selects one, or with an operator acts on it
+(`yS` + label). The key LazyVim and flash's README bind, >lua
+    vim.keymap.set({ "n", "x", "o" }, "S", function() require("flash").treesitter() end)
+<works unchanged. `require("org.integrations.flash").jump(opts)` does
+the same even with `integrations.flash = false`, and is flash's own
+jump outside org buffers. flash's remote tree-sitter search
+(`treesitter_search`) still needs a parser.
+
 ==============================================================================
 26. APPEARANCE AND HIGHLIGHTS                                 *org-appearance*
 
@@ -6636,6 +6806,10 @@ Options under `ui`:
                          values from a floating list (|org-choice-list|);
                          "input": the command line with <Tab> completion
   imenu_depth            headline levels of `imenu` (gO), default 2
+  context                the sticky headline context (|org-context|):
+                         { enabled = false, max_lines = 3,
+                         trim_scope = "outer", line_numbers = true,
+                         zindex = 20 }
   conceal_links          show only link descriptions (conceallevel=2)
   hide_emphasis_markers  hide * / _ = ~ + around emphasized text
   hide_leading_stars     show only the last star of each headline
@@ -6717,6 +6891,45 @@ replaces built-in ones, for display, completion and export: >lua
       { "snowman", "\\diamond", true, "&#9731;", "[snow]", "[snow]", "☃" },
     }
 <
+Sticky headline context                                       *org-context*
+Like nvim-treesitter-context, a floating window over the top rows of an
+org window shows the headlines the first line on screen is under, so
+you know where you are in a long, deeply nested document. The lines are
+drawn as in the buffer: stars or bullets, TODO keywords, priorities,
+tags, concealed links. It is off by default, since it covers lines of
+the window; turn it on with `ui.context.enabled = true` or
+`:Org context_toggle`. Options under `ui.context`:
+  enabled       show it in every org window (false)
+  max_lines     most headlines shown (3); a window keeps at least one
+                line of its own
+  trim_scope    with more headlines than that, drop the "outer"
+                (outermost, default) or the "inner" ones
+  line_numbers  the headlines' line numbers in the gutter of windows with
+                'number' or 'relativenumber' (true)
+  zindex        of the floats (20)
+What counts is the line under the float: when the lines it covers end
+the entry, the context gets shorter. A closed fold is one line. Each
+window has its own context, which follows scrolling, resizing, folding
+and edits; it is closed when the window shows a buffer that isn't an org
+buffer, or closes. The cursor can be under the float, as with
+nvim-treesitter-context: a 'scrolloff' of at least `max_lines` keeps it
+in view. Set `vim.w.org_context` or `vim.b.org_context` to false to leave
+a window or a buffer without one.
+
+With nvim-treesitter-context installed nothing needs doing: it draws
+nothing in org buffers, which have no tree-sitter parser. When Neovim
+does have an `org` parser and nvim-treesitter-context is on, org buffers
+are left to it, so the two floats never cover each other
+(`vim.b.org_context = true` asks for org.nvim's).
+
+:Org context_toggle  Turn the sticky context on or off in every window.
+:Org context_goto    Go to the innermost headline of the context; with a
+                count, to the one that many levels out (|m'| is set).
+Neither has a default key; map them with `mappings.org`.
+Highlight groups: `OrgContext` (the float, linked to NormalFloat),
+`OrgContextLineNumber` (LineNr) and `OrgContextBottom` (its last line,
+underlined).
+
 :Org num_mode   Toggle headline numbering in the buffer (org-num-mode).
 :Org indent_mode  Toggle virtual indentation in the buffer
                 (org-indent-mode).
@@ -7037,6 +7250,8 @@ Highlight groups (all `default`, override with |nvim_set_hl()|):  *org-highlight
     `OrgHorizontalRule`, `OrgMacro`, `OrgHiddenStars`, `OrgSuperscript`,
     `OrgSubscript`, `OrgInlinetask`, `OrgSparseMatch`, `OrgBabelRunning`,
     `OrgBabelOutput`, `OrgCommandPreview`
+  - `OrgContext`, `OrgContextLineNumber`, `OrgContextBottom`
+    (|org-context|)
   - `OrgMenuKey`, `OrgMenuHeading`, `OrgMenuDesc`, `OrgMenuMore`,
     `OrgMenuOn`, `OrgMenuOff`, `OrgMenuValue`, `OrgMenuSelected` (|org-key-menus|,
     |org-choice-list|)
@@ -7464,8 +7679,9 @@ agenda ~
 capture ~
   templates {} (|org-capture-templates|; empty = Emacs's "t" Task
   template), templates_contexts {} (|org-capture-contexts|),
-  window "split", use_agenda_date false (the global capture key in the
-  agenda uses the date at point, like the agenda's `K`)
+  window "split", in_place false (|org-capture-in-place|),
+  use_agenda_date false (the global capture key in the agenda uses the
+  date at point, like the agenda's `K`)
 refile ~
   targets {} (empty = level-1 headlines of the current buffer),
   max_level nil, include_current_file nil, use_outline_path false,
@@ -7532,7 +7748,9 @@ links ~
   search_must_match_exact_headline "query-to-create" (true|false),
   frame_setup { file = "other-window" } ("current"|"split"|"vsplit"|"tab"|
   function), make_description nil, doi_server_url "https://doi.org/",
-  search_functions {}, translation_function nil, mouse_1_follows_link 450
+  docview_command nil ("cmd --page=%p %s"|function(file, page)|false;
+  |org-links|), search_functions {}, translation_function nil,
+  mouse_1_follows_link 450
   (true|"double"|ms|false), tab_follows_link false,
   open_directory_means_index_dot_org false, open_non_existing_files false
   (|org-links-mouse|), info_other_documents { dir, libc, make } (URLs of
@@ -7652,6 +7870,8 @@ export ~                                                   *org-config-export*
 mouse ~
   org_mouse false, features { "context-menu", "yank-link", "activate-stars",
   "activate-bullets", "activate-checkboxes" } (|org-mouse|)
+integrations ~
+  mini_ai true, snacks_scope true, flash true (|org-integrations|)
 notifications ~
   enabled false, reminder_time { 12, 9, 6, 3, 0 }, check_interval 60,
   system_notification true, single_instance true, notifier nil
@@ -8656,6 +8876,10 @@ Their targets are `{ bufnr = n, lnum = l }`.
   #+MACRO: name text $1                 a macro for export
 
 After editing a `#+` line, press <C-c><C-c> on it to refresh the buffer.
+An affiliated keyword (`#+NAME:`, `#+CAPTION:`, `#+ATTR_...:`, ...) belongs
+to the element below it, so there <C-c><C-c> acts on that element instead,
+like Emacs: it recalculates a table, runs a block or `#+CALL:`, updates a
+dynamic block or repairs a list.
 Like Emacs, this keeps the folds as they are: a new `#+STARTUP:` visibility
 applies with <C-u><C-u><Tab> (`16<Tab>`) or when the file is opened again
 (`:w`, then `:e`).
@@ -8872,12 +9096,16 @@ Differences from Emacs:
   visits every agenda file, so it updates them all, without saving).
 - Bulk action `f` and agenda skip functions take Lua instead of Elisp.
   Capture `%(sexp)` takes Emacs Lisp (see above) or a Lua expression.
-- Capture edits the text in a separate buffer that is stored at the target
-  (resolved when the capture starts) on finalize, instead of an indirect
-  buffer narrowed to the text already inserted in the target (Neovim has
-  no indirect buffers), so the target file does not show the new text
-  until the capture is finished. `unnarrowed` captures do insert the text
-  into the target right away (|org-capture-unnarrowed|). Mail and news `%:keyword` values (`%:from`,
+- By default capture edits the text in a separate buffer and stores it at
+  the target on finalize; Emacs inserts it into the target right away.
+  `capture.in_place = true` does that too, but Neovim has no indirect
+  buffers nor narrowing: the capture window shows
+  the target buffer itself, with the lines outside the new entry hidden
+  (`conceal_lines` in that window only) and the cursor kept inside it
+  (|org-capture-in-place|). Undo in that window is the target buffer's
+  undo, and `:w` writes the file instead of finishing the capture. A
+  second capture into a file already being captured into in place uses a
+  separate capture buffer, as every capture gets by default. Mail and news `%:keyword` values (`%:from`,
   `%:subject`, ...) come from Emacs link sources (Gnus, mu4e, ...) that
   have no Neovim counterpart; only `%:link`, `%:description`,
   `%:annotation`, `%:initial` and `%:type` exist.
@@ -8896,17 +9124,30 @@ Differences from Emacs:
   C-u C-u C-u C-c C-w. Agenda archives-mode and view toggles (`va`, `v[`,
   ...) stay on until toggled off.
 - Babel sessions (|org-babel| Sessions) are live REPLs in terminal
-  buffers for shells, python, js/node, ruby (irb) and R; there are no
-  sessions for julia, SQL engines or other languages. Lua blocks run
+  buffers for shells, python, js/node, ruby (irb), R, julia, ocaml,
+  scheme, haskell (ghci) and SQL; other languages have none. Emacs has
+  no SQL sessions (ob-sql and ob-sqlite raise "not yet implemented"):
+  here sqlite3, psql and mysql keep one connection per `:session`,
+  opened with the headers of the block that starts it. Lua blocks run
   inside Neovim instead of an external `lua` unless the `cmd` of
   `babel.languages.lua` names one (lua sessions are a Neovim
   environment with a prompt buffer; in Neovim a table variable is a
   nested Lua table, where ob-lua
   makes `key=value` of two-column rows). Differences from comint: the code
   of a block reaches the REPL as one line that runs it from a file, not
-  line by line, so the REPL shows that line instead of the code, and a
+  line by line, so the REPL shows that line instead of the code (julia,
+  ocaml and scheme then print the code itself, without prompts), and a
   python/node block's intermediate expression values are not echoed
-  (as with python.el's file sending). Shells start without their rc
+  (as with python.el's file sending). julia sessions are a plain julia
+  REPL, not ESS; ocaml sessions a plain `ocaml` toplevel, not tuareg
+  (and blocks without `:session` still get a new toplevel each, where
+  Emacs sends every block to `*OCaml*`); scheme sessions a plain REPL of
+  the implementation, not Geiser: a block without `:session` runs in a
+  new process (Emacs keeps one REPL per Org buffer), the default session
+  is `*scheme*` and `:host`/`:port` (geiser-connect) are not supported;
+  haskell sessions a plain ghci, not haskell-mode's inf-haskell, which
+  gets multi-line definitions between `:{` and `:}` where ob-haskell
+  sends the lines as they are. Shells start without their rc
   files and a shell session named `x` is the buffer `*x*` (Emacs names
   it `x`). The R session is a plain `R` console, not ESS (no
   `ess-ask-for-ess-directory`, graphics devices or `:results output
@@ -8949,7 +9190,8 @@ Differences from Emacs:
   where Emacs uses an Emacs package's REPL: gnuplot (gnuplot-mode
   sessions), haskell (inf-haskell: ghci is fed the block and markers),
   ocaml (tuareg: a new `ocaml` toplevel), julia (ESS), scheme (Geiser:
-  `impl`'s command evaluates the forms and writes the last value) and
+  `impl`'s command evaluates the forms and writes the last value; these
+  three keep a REPL with `:session`, see above) and
   Common Lisp (`org-babel-lisp-eval-fn` SLIME/SLY: `cmd`, default `sbcl
   --script`, reads the form and prints its values like
   swank:eval-and-grab-output). The cider, inf-clojure and slime Clojure
@@ -8981,7 +9223,12 @@ Differences from Emacs:
   `emacs --batch` (`babel.emacs_lisp`) that knows nothing of your Emacs
   configuration unless its `args` load it; without an Emacs executable
   only the interpreter's subset works.
-- Export: see |org-export-unsupported|.
+- Export: see |org-export-unsupported|. In HTML, a file link with a
+  search option to a PDF (`[[file:doc.pdf::5]]`, `attachment:x.pdf::5`)
+  isn't searched for: a page number becomes `#page=5`, another option the
+  anchor (Emacs searches the PDF's raw bytes as text, which aborts the
+  export or gives `#MissingReference`). Other files are searched as in
+  Emacs.
 - Links (|org-links|):
   - `elisp:(sexp)` links are evaluated in a separate `emacs --batch`
     (`babel.emacs_lisp`), not in the editor, after `links.confirm_elisp`
@@ -8994,9 +9241,14 @@ Differences from Emacs:
   - `help:` opens Vim's |:help|: Emacs `help:` links name Elisp functions
     and variables (describe-function), which do not exist here. `info:`
     runs the `info` program in a terminal, `man:` uses |:Man|.
-  - Links to Emacs applications (gnus, rmail, mhe, bbdb, irc/erc, eww,
-    w3m, calendar) can't be followed or stored: there is no such
-    application in Neovim. `docview:` opens the file. BibTeX links
+  - Links to Emacs applications (gnus, rmail, mhe, bbdb, calendar) can't
+    be followed or stored: there is no such application in Neovim.
+    `eww:` and `w3m:` links open their URL with |vim.ui.open()| (Emacs
+    browses it in eww or emacs-w3m), and a link stored in a web page
+    buffer (netrw's `:e https://…`) is its URL; `irc:` and `news:` go to
+    the system's handler (Emacs: ERC, Gnus). `docview:FILE::PAGE` opens
+    the document in an external viewer at that page
+    (`links.docview_command`; Emacs shows it in a DocView buffer). BibTeX links
     (|org-bibtex|) work: `bibtex:` opens the file and a link stored in a
     .bib buffer finds the entry. `bibtex_yank` reads only the yanked text
     (Emacs writes an older read entry when the yanked text has none),
@@ -9276,7 +9528,7 @@ Each extension is marked as one of:
 Stable:       `ql`, `super_agenda`, `present`, `roam`, `quickadd`, `ics`,
               `kanban`, `sidebar`, `merge`, `transclusion`, `heatmap`
 Experimental: `review`, `pomodoro`, `drill`, `cli`, `diagrams`, `code`,
-              `literate`, `lsp`, `timeline`, `hugo`, `journal`
+              `literate`, `lsp`, `timeline`, `hugo`, `journal`, `src_lsp`
 
 Bug reports about experimental extensions are just as welcome.
 
@@ -11883,9 +12135,64 @@ What it does ~
   foldingRange     subtrees, blocks and drawers (for
                    `vim.lsp.foldexpr()`).
   documentLink     web links and links whose target resolves.
+  completion       the candidates of |org-completion|: `#+` keywords and
+                   their values (`#+STARTUP:`, `#+OPTIONS:`, src block
+                   languages and header arguments), TODO keywords,
+                   tags, property and drawer names, link types and
+                   targets (`[[*heading`, `[[#custom-id`) and
+                   `\entities`, each with a completion kind and the
+                   range it replaces. Trigger characters: `#` `+` `:`
+                   `[` `\` `*`.
+  formatting       |vim.lsp.buf.format()| (and rangeFormatting on a
+                   selection): indent like `=` (org-indent-region),
+                   align every table (org-table-align) and realign the
+                   tags of every headline. The edits are the smallest
+                   that do it, and an already formatted buffer gets
+                   none. `formatting` turns parts off.
+  selectionRange   grow the selection by syntax: the word, the objects
+                   around it (markup, links, timestamps, footnote
+                   references, targets, entities, cookies), the line,
+                   a block's or drawer's contents, the element, the
+                   elements containing it (item, list, ...), the
+                   section, the subtree, its parents' subtrees and the
+                   file. Neovim 0.12 and later use it for `an` and `in`
+                   in Visual mode (`vim.lsp.buf.selection_range()`).
+  inlayHint        clock sums, deadline countdowns and effort (below).
+  codeLens         "Run block", "Update" and "Clock in" / "Clock out"
+                   (below).
 
-Completion is not provided: org.nvim's own completion (|org-completion|)
-already covers org buffers.
+Completion ~
+Neovim's built-in LSP completion then works in org buffers with no
+completion plugin. To pop up the menu as you type (after `:`, `#+`,
+`[[`, `\`):
+>lua
+    require("org").setup({
+      extensions = {
+        lsp = {
+          on_attach = function(client, bufnr)
+            vim.lsp.completion.enable(true, client.id, bufnr, { autotrigger = true })
+          end,
+        },
+      },
+    })
+<
+Without `autotrigger`, |i_CTRL-X_CTRL-O| (the LSP 'omnifunc') shows it.
+With blink.cmp or nvim-cmp and org.nvim's own source (|org-completion|)
+the candidates would be listed twice: keep one of them (turn the LSP one
+off with `features = { completion = false }`).
+
+Formatting ~
+conform.nvim's `lsp_format = "fallback"` and format on save
+(`vim.lsp.buf.format()` in a BufWritePre autocmd) use it. With
+`adapt_indentation` off (the default) indentation moves body text to
+column 0, as `=` does: set `formatting = { indent = false }` to keep
+yours and only align tables and tags. Src block code moves to
+`edit_src_content_indentation`, keeping its own layout; example, export
+and verse blocks keep their contents' relative indentation.
+`gq` keeps filling paragraphs (org's 'formatexpr', which the LSP client
+leaves alone). `vim.lsp.buf.format()` called from Visual mode (a
+mapping), or with a `range`, formats only those lines (the tables they
+touch are aligned whole).
 
 Rename ~
 |vim.lsp.buf.rename()| renames what is under the cursor and rewrites every
@@ -11940,6 +12247,44 @@ Code actions ~
     `org.action` command. `code_actions.entry` takes a list of
     `{ action, title }` pairs instead.
 
+Inlay hints ~
+With `:lua vim.lsp.inlay_hint.enable()` the server adds, at the end of
+lines (each kind turned off on its own under `inlay_hints`):
+  `clock`        "clocked 1:30" on each headline whose subtree has clocked
+               time, the sums of `clock_display` (|org-clock|) over
+               `clock_range` (a `:block` range like "thisweek"; by default
+               `clock.display_default_range`, this year)
+  `countdowns`   after a DEADLINE or SCHEDULED timestamp, how far it is,
+               in the agenda's words: "in 3 d.", "today", "2 d. ago".
+               Like the agenda's reminders, a coming date is counted
+               down only within the warning period (the deadline's `-Nd`
+               cookie, else `deadline_warning_days`, 14); past dates
+               always are. Done entries get none.
+  `effort`       "effort 1:30/2:00" on a headline with an Effort: the time
+               clocked in its subtree (all of it) against the estimate,
+               with "over" once it is passed. A headline whose children
+               have efforts gets their sum, like column view's `{:}`.
+Hints follow the buffer as you type. When a clock starts or stops, the
+server asks the client to request hints and lenses again
+(`workspace/inlayHint/refresh`, `workspace/codeLens/refresh`). Neovim
+0.11 has no lens refresh request: there the lenses of the org buffers
+that show some are refreshed with `vim.lsp.codelens.refresh()`.
+
+Code lenses ~
+Lenses over the line they act on (`vim.lsp.codelens.enable()`, or
+`vim.lsp.codelens.refresh()` on Neovim 0.11; run the one under the cursor
+with `vim.lsp.codelens.run()`):
+  `run_block`    "Run block" on `#+begin_src` lines: executes the block
+               (`babel_execute`)
+  `dblock`       "Update" on `#+BEGIN:` dynamic blocks (`dblock_update`)
+  `clock`        "Clock in", or "Clock out" on the clocked headline; on
+               headlines with a TODO keyword that isn't done (`"todo"`),
+               on every headline (`true`) or none (`false`)
+The lenses are resolved (`codeLens/resolve`) when shown, so the clock
+lens says what clicking it does now. Their command, `org.lens`, is a
+client-side command (`vim.lsp.commands`) running the action at the
+lens's line, in a window showing the file.
+
 Workspace ~
 References, rename, backlink counts and workspace symbols look at the
 agenda files, the `.org` files under `org_directory` (with
@@ -11980,8 +12325,11 @@ Options ~
   `on_attach`               `function(client, bufnr)`
   `features`                `{ document_symbols, workspace_symbols,
                             diagnostics, hover, definition, references,
-                            rename, code_actions, folding, document_links }`
-                            (all true)
+                            rename, code_actions, folding, document_links,
+                            completion, formatting, selection_range,
+                            inlay_hints, code_lens }` (all true)
+  `formatting`              `{ indent = true, tables = true,
+                            tags = true }`
   `diagnostics`             `{ debounce = 500, max_lines = 3000,
                             checkers = nil (org-lint's default set),
                             exclude = {}, severity = { high = "Error",
@@ -12000,6 +12348,10 @@ Options ~
   `rename`                  `{ update_descriptions = true,
                             write_unloaded = true }`
   `code_actions`            `{ entry = true, conversions = true }`
+  `inlay_hints`             `{ clock = true, countdowns = true,
+                            effort = true, clock_range = nil }`
+  `code_lens`               `{ run_block = true, dblock = true,
+                            clock = "todo" }`
 
 Notes ~
   - The server uses UTF-8 positions (`positionEncoding`), so columns are
@@ -12016,6 +12368,79 @@ Notes ~
     10 seconds of the rename (it does so while applying the edit).
   - `:checkhealth org` shows the running client, the number of workspace
     files and of org-lint checkers.
+
+------------------------------------------------------------------------------
+Language servers in src blocks                        *org-extensions-src-lsp*
+
+Stability: experimental (|org-extensions-stability|)
+
+`src_lsp` lets the language server of a block's language work inside
+`#+begin_src` blocks, like otter.nvim: its diagnostics show in the block,
+and go to definition, hover, references and completion are answered by
+it. It uses the servers you configured with |vim.lsp.config()| and
+|vim.lsp.enable()|; list the languages it should serve:
+>lua
+    vim.lsp.enable("lua_ls")
+    require("org").setup({
+      extensions = { src_lsp = { languages = { "lua", "python" } } },
+    })
+<
+Nothing is loaded and no server started until an org buffer (a file)
+with a block of a listed language opens. For each such buffer and
+language, a hidden buffer holds that language's blocks at their own
+line numbers (every other line blank), with the language's filetype
+(`src_lang_modes`, as in the edit buffer of |org-babel|), and the
+language servers attach to it. It follows your edits `debounce` ms
+after the last one. A small in-process server attached to the org
+buffer forwards requests made inside a block to those servers and maps
+the answers back, so the LSP functions and keys work there:
+|vim.lsp.buf.definition()| (map it to `gd`), `K` (hover), `grr`, `gri`,
+`grt`, <C-s> (signature help); a definition in another block jumps to
+its line in the org buffer. Outside the blocks it answers nothing, and
+org's own features (|org-extensions-lsp| included) keep working.
+
+Completion ~
+The forwarding server is an LSP completion source: |lsp-completion|,
+blink.cmp and nvim-cmp's LSP sources offer the server's items inside a
+block, and `<C-x><C-o>` (org's 'omnifunc') hands over to
+|vim.lsp.omnifunc()| there. `completion = false` turns this off.
+
+Options ~
+  `languages`    `{}`  the languages served: names (`{ "lua", "sh" }`),
+                 or name -> `{ servers = { ... } }` to choose the
+                 servers: names of |vim.lsp.config()| configurations or
+                 config tables (`{ name = ..., cmd = ... }`). Without
+                 `servers`, every enabled configuration whose `filetypes`
+                 has the language's filetype starts. A block whose
+                 language has the same filetype as a listed one (`sh`
+                 and `bash`) shares its hidden buffer.
+  `debounce`     `200`  milliseconds after the last change before the
+                 hidden buffers are updated (a request inside a block
+                 updates them first).
+  `diagnostics`  `true`  show the servers' diagnostics in the block
+                 bodies (namespace `org_src_lsp`).
+  `completion`   `true`  see above.
+
+Notes ~
+  - Each block is seen as it is in the file: noweb references
+    (`<<name>>`) are not expanded, `:var` values are not defined and
+    `:prologue` is not added, so a server may report them; blocks of one
+    language form one file whatever their `:tangle` or `:session`.
+  - A block's common indentation is removed (unless `-i` or
+    `src_preserve_indentation`), and the comma of an escaped `,*` line
+    becomes a space; positions are mapped back.
+  - The hidden buffer is named after the org file with the language's
+    extension (`notes.org.src-lua.lua`) and never written; its root
+    directory comes from the configuration's `root_markers` (or
+    `root_dir`) searched from the org file's directory. Some servers
+    (lua_ls) only report diagnostics for a file inside a root.
+  - The servers' diagnostics also stay on the hidden buffer, so a
+    workspace-wide diagnostics list shows them under its name.
+  - Rename, code actions and formatting are not forwarded.
+  - `:checkhealth org` lists the servers of each language and warns
+    about a language without one, or a server whose program is missing.
+  - otter.nvim does the same for many filetypes; enable only one of the
+    two for org buffers.
 
 ------------------------------------------------------------------------------
 Transclusion (org-transclusion)                  *org-extensions-transclusion*

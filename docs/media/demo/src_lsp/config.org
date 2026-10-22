@@ -1,0 +1,16 @@
+#+TITLE: My Neovim helpers
+
+* Greeting
+#+begin_src lua
+local function greet(name)
+  return "hello, " .. name
+end
+#+end_src
+
+* Using it
+Blocks of one language share a language server, so a function
+defined above is known here.
+#+begin_src lua
+local message = greet("org")
+print(mesage)
+#+end_src

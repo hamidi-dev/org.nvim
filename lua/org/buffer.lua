@@ -160,6 +160,8 @@ function M.attach(bufnr)
   try("org.ui.decorations", "attach", bufnr)
   try("org.ui.src_highlight", "attach", bufnr)
   try("org.cite.attach", "attach", bufnr)
+  -- mini.ai, snacks.nvim scopes and flash.nvim, when they are loaded
+  try("org.integrations", "attach", bufnr)
   -- (the attach parts of the larger modules, which load on first use)
   try("org.table.attach", "attach", bufnr)
   try("org.clock.attach", "attach", bufnr)

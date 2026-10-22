@@ -12,10 +12,12 @@
 --- The target is resolved when the capture starts (like Emacs, which
 --- inserts the template into the target right away): headlines and date
 --- tree nodes are created then, and the location is tracked with an
---- extmark until the capture is finished. The text is edited in a separate
---- capture buffer and stored at that location on finalize, except with
---- `unnarrowed`: the text then goes into the target buffer right away and
---- is edited there, in a window showing the whole file.
+--- extmark until the capture is finished. The text goes into the target
+--- buffer right away too and is edited there, in a window that shows only
+--- the new entry (`capture.in_place`, Emacs's narrowed capture buffer) or,
+--- with `unnarrowed`, the whole file. With `capture.in_place = false` (or
+--- when another capture is editing that buffer) it is edited in a separate
+--- capture buffer and stored at that location on finalize.
 ---
 --- Template fields: see `:h org-capture-templates`.
 ---

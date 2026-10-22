@@ -547,7 +547,10 @@ function M.archive_to_sibling(target)
   if bufnr == vim.api.nvim_get_current_buf() then
     local n = vim.api.nvim_buf_line_count(bufnr)
     pcall(vim.api.nvim_win_set_cursor, 0, { math.max(1, math.min(s, n)), 0 })
-    pcall(vim.api.nvim_command, sib_line .. "foldclose")
+    -- the sibling's mark is gone when something deleted its line
+    if sib_line then
+      pcall(vim.api.nvim_command, sib_line .. "foldclose")
+    end
   end
   utils.notify(string.format('Subtree "%s" moved to archive sibling', hl:plain_title()))
   return sib_line

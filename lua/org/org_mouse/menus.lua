@@ -429,6 +429,32 @@ local TABLE_MARK_LABELS = {
   ["'"] = "(') Recalculation: None",
 }
 
+--- Shrink (`on`) the columns with a width cookie of every table of the
+--- buffer, or expand them all.
+---@param bufnr integer
+---@param on boolean
+function M.apply_narrowing(bufnr, on)
+  local shrink = require("org.table.shrink")
+  if on then
+    shrink.shrink_all(bufnr)
+    return
+  end
+  local tbl = require("org.table")
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local l = 1
+  while l <= #lines do
+    local info = tbl.is_table_line(lines[l]) and tbl.find(bufnr, l) or nil
+    if info then
+      if next(shrink.get(bufnr, l)) then
+        shrink.expand(bufnr, l)
+      end
+      l = info.finish + 1
+    else
+      l = l + 1
+    end
+  end
+end
+
 local function table_menu()
   local opts = config.opts --[[@as table]]
   local function t(name)
@@ -452,10 +478,15 @@ local function table_menu()
         e("Insert Column", t("shift_meta_right")),
         "--",
         {
-          -- (not an option of org.config: set here, read by nothing yet)
-          toggle("Enable Narrowing", opts.table_limit_column_width ~= false),
+          -- org-mouse.el toggles org-table-limit-column-width, Org 8's
+          -- narrowing of columns to their width cookie, which Org 9 replaced
+          -- by shrinking (org-table-shrink): the toggle is the shrinking of
+          -- tables with width cookies (startup_shrink_all_tables), applied
+          -- to the buffer's tables at once
+          toggle("Enable Narrowing", opts.startup_shrink_all_tables == true),
           fn = function()
-            opts.table_limit_column_width = not (opts.table_limit_column_width ~= false)
+            opts.startup_shrink_all_tables = not opts.startup_shrink_all_tables
+            M.apply_narrowing(0, opts.startup_shrink_all_tables)
           end,
         },
       },

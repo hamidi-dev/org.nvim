@@ -351,7 +351,7 @@ by topic, with each command's Vim and Emacs keys on one row.
 | 🧪 | **Babel** | Asynchronous execution in many languages (with a spinner, placeholder results and cancelling), `:session` as live REPL buffers (shells, Python, Node, Ruby, R, Lua) with `:async`, inline `src_lang{…}` blocks and `call_name()`, `:results`, `:var` references that evaluate blocks (`name(x=1)`, slices, other files, IDs), `:noweb`, `:wrap`, `:cache`, `:file`, `#+CALL`, Library of Babel, tangling, optional evaluation on export, the `C-c C-v` commands, and editing a block in its own buffer with `C-c '`; `emacs-lisp` blocks run in a separate Emacs when one is installed |
 | 📤 | **Export** | A port of Emacs's export engine (with `#+BIND` and `(eval …)` macros): HTML, LaTeX/PDF, Beamer, KOMA letters, man pages, Markdown, ASCII, Org, iCalendar, ODT and Texinfo/Info back-ends matching Emacs output, GitHub-flavoured Markdown, citations with the CSL processor, publishing projects, every `#+OPTIONS` key, plus DOCX, EPUB and more through pandoc |
 | 🖼️ | **Images and LaTeX** | Image links and LaTeX fragments previewed in place of the link (`org-link-preview`, `-region`, `-clear`, `-refresh`, `org-latex-preview`) with Neovim 0.13's `vim.ui.img`, or snacks.nvim / image.nvim on older versions; `org-image-actual-width`, `#+ATTR_ORG: :width` / `:align`, images as link descriptions, previews on TAB, `#+STARTUP: linkpreviews latexpreview`, the Emacs LaTeX processes (dvipng, dvisvgm, xelatex, imagemagick) plus tectonic, images in `ltximg/`, preview functions for custom link types, remote http(s) images |
-| 🧩 | **[Extensions](#-extensions)** | Optional, off until enabled: slideshows (org-present), queries and saved views (org-ql), linked notes (org-roam), grouped agendas (org-super-agenda), Todoist-style quick add, a guided weekly review, pomodoros (org-pomodoro), flashcards with spaced repetition (org-drill), an in-process language server (symbols, hover, cross-file rename), kanban board, timeline, clock heatmap and Today sidebar, code ↔ notes links and literate Neovim config, Hugo blog export (ox-hugo), a structural git merge driver, iCalendar subscriptions, the `org` command line, mermaid/dot/plantuml diagrams, live transclusion (org-transclusion) and a dated journal (org-journal) |
+| 🧩 | **[Extensions](#-extensions)** | Optional, off until enabled: slideshows (org-present), queries and saved views (org-ql), linked notes (org-roam), grouped agendas (org-super-agenda), Todoist-style quick add, a guided weekly review, pomodoros (org-pomodoro), flashcards with spaced repetition (org-drill), an in-process language server (symbols, hover, cross-file rename), language servers inside src blocks (otter.nvim-style), kanban board, timeline, clock heatmap and Today sidebar, code ↔ notes links and literate Neovim config, Hugo blog export (ox-hugo), a structural git merge driver, iCalendar subscriptions, the `org` command line, mermaid/dot/plantuml diagrams, live transclusion (org-transclusion) and a dated journal (org-journal) |
 | 🎁 | **And more** | Column view, `org-indent` mode, speed keys, footnotes, sparse trees, `org-lint`, entry encryption (`org-crypt`), `org-protocol`, inline tasks, org-num, pretty entities, appointment notifications, attachments (with `org-attach-git`), RSS/Atom feeds (`org-feed`), MobileOrg, IDs, dynamic blocks, BibTeX links (`ol-bibtex`), `org-ctags`, the Org/table/agenda menus and org-mouse, completion, `:checkhealth org`, a [Lua API](docs/guide.md#lua-api) and a [session server](docs/guide.md#session-server) |
 
 ---
@@ -374,7 +374,7 @@ by topic, with each command's Vim and Emacs keys on one row.
 
 ## 📊 Parity with Emacs Org
 
-**98.3% of Org 9.8.12's commands, options, Babel languages, link types and
+**98.6% of Org 9.8.12's commands, options, Babel languages, link types and
 export transcoders behave the same in org.nvim** (strict count, October
 2026). Emacs itself lists every one of them in Org 9.8.12; each is classified in
 [`docs/parity/inventory.tsv`](docs/parity/inventory.tsv) and scored by
@@ -382,8 +382,8 @@ export transcoders behave the same in org.nvim** (strict count, October
 
 | Count | Parity | What it counts |
 | --- | --- | --- |
-| **Strict** | `▰▰▰▰▰▰▰▰▰▰` **98.3%** | All 2,297 items with a user-visible effect, including the 31 that need Emacs itself (Gnus, BBDB, eshell, TRAMP, CDLaTeX...) |
-| Without Emacs-only | `▰▰▰▰▰▰▰▰▰▰` 99.7% | The 2,266 of those that can exist outside Emacs |
+| **Strict** | `▰▰▰▰▰▰▰▰▰▰` **98.6%** | All 2,297 items with a user-visible effect, including the 31 that need Emacs itself (Gnus, BBDB, eshell, TRAMP, CDLaTeX...) |
+| Without Emacs-only | `▰▰▰▰▰▰▰▰▰▰` 99.9% | The 2,266 of those that can exist outside Emacs |
 
 By area (strict):
 
@@ -397,9 +397,9 @@ By area (strict):
 | ⏱️ Clocking and timers | `▰▰▰▰▰▰▰▰▰▰` 100% | — |
 | 🧮 Tables and plots | `▰▰▰▰▰▰▰▰▰▰` 99.6% | Calc's symbolic mode and date format can't be set in `calc_default_modes` |
 | 🏛️ Column view | `▰▰▰▰▰▰▰▰▰▰` 100% | — |
-| 🔗 Links | `▰▰▰▰▰▰▰▰▱▱` 79.1% | Links to Emacs applications (Gnus, BBDB, MH-E, rmail) need Emacs; `eww:`/`w3m:` links and `docview:` page numbers are missing |
+| 🔗 Links | `▰▰▰▰▰▰▰▰▱▱` 81.6% | Links to Emacs applications (Gnus, BBDB, MH-E, rmail) need Emacs |
 | 📎 Attachments, IDs, footnotes, lint, protocol, crypt | `▰▰▰▰▰▰▰▰▰▰` 100% | — |
-| 🧪 Babel and source editing | `▰▰▰▰▰▰▰▰▰▰` 96.9% | `css`, `makefile` and `org` blocks don't run yet and `awk` ignores `:var`/`:stdin`; Common Lisp runs in `sbcl`, not SLIME/SLY; TRAMP, eshell and Clojure's CIDER need Emacs |
+| 🧪 Babel and source editing | `▰▰▰▰▰▰▰▰▰▰` 98.5% | Common Lisp runs in `sbcl`, not SLIME/SLY; TRAMP, eshell and Clojure's CIDER need Emacs |
 | 📤 Export and publishing | `▰▰▰▰▰▰▰▰▰▰` 99.9% | BBDB anniversaries in iCalendar need Emacs |
 | 📚 Citations | `▰▰▰▰▰▰▰▰▰▰` 100% | — |
 | 📰 Feeds and MobileOrg | `▰▰▰▰▰▰▰▰▰▰` 100% | — |
@@ -446,7 +446,7 @@ its options or keys are called out in the release notes) or 🧪
 
 | ✅ Stable | 🧪 Experimental |
 | --- | --- |
-| `ql`, `super_agenda`, `present`, `roam`, `quickadd`, `ics`, `kanban`, `sidebar`, `merge`, `transclusion`, `heatmap` | `review`, `pomodoro`, `drill`, `cli`, `diagrams`, `code`, `literate`, `lsp`, `timeline`, `hugo`, `journal` |
+| `ql`, `super_agenda`, `present`, `roam`, `quickadd`, `ics`, `kanban`, `sidebar`, `merge`, `transclusion`, `heatmap` | `review`, `pomodoro`, `drill`, `cli`, `diagrams`, `code`, `literate`, `lsp`, `timeline`, `hugo`, `journal`, `src_lsp` |
 
 The [guide](docs/guide.md#-extensions) describes each one with a demo,
 the [extensions status](https://org-nvim.com/extensions.html) page shows

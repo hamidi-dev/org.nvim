@@ -48,6 +48,10 @@ M.HANDLERS = {
   octave = "octave",
   matlab = "octave",
   forth = "forth",
+  awk = "awk",
+  css = "body",
+  makefile = "body",
+  org = "org",
 }
 
 --- The options of `lang` (its `babel.languages` entry), or nil when the

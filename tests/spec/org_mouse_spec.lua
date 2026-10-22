@@ -610,7 +610,7 @@ describe("org-mouse", function()
       "Move Column Right",
       "Delete Column",
       "Insert Column",
-      "[X] Enable Narrowing",
+      "[ ] Enable Narrowing",
     }, names("]OrgMouse.Column"))
     eq({
       "Move Row Up",
@@ -635,6 +635,23 @@ describe("org-mouse", function()
     }, names("]OrgMouse"))
     emenu("( ) (*) Recalculation: Manual")
     eq({ "| a | b |", "| * | 1 |" }, buf_lines(buf))
+  end)
+
+  it("Enable Narrowing toggles shrinking the columns with a width cookie", function()
+    local shrink = require("org.table.shrink")
+    local buf = org_buffer({ "| <2>  | b |", "| abcd | 1 |", "", "| x | <3> |", "| y | wxyz |" })
+    eq("table", context(1, 3))
+    emenu("Column", "[ ] Enable Narrowing")
+    eq(true, config.opts.startup_shrink_all_tables)
+    eq({ [1] = true }, shrink.get(buf, 1))
+    eq({ [2] = true }, shrink.get(buf, 4))
+    eq("table", context(1, 3))
+    eq("[X] Enable Narrowing", names("]OrgMouse.Column")[5])
+    emenu("Column", "[X] Enable Narrowing")
+    eq(false, config.opts.startup_shrink_all_tables)
+    eq({}, shrink.get(buf, 1))
+    eq({}, shrink.get(buf, 4))
+    config.opts.startup_shrink_all_tables = config.defaults.startup_shrink_all_tables
   end)
 
   it("builds the region menu", function()

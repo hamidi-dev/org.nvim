@@ -176,7 +176,7 @@ end
 function M.store(tpl, lines, ctx)
   ctx = ctx or {}
   lines = trim_blank(vim.deepcopy(lines))
-  if #lines > 0 then
+  if #lines > 0 and not ctx.skip_filters then
     for name, filter in pairs(M.store_filters) do
       local ok, res, target = pcall(filter, tpl, lines, ctx)
       if not ok then
@@ -283,7 +283,10 @@ end
 --- Restore the target buffer's own mappings replaced by an unnarrowed
 --- capture, and drop its marks.
 local function end_unnarrowed(s)
-  local bufnr = s.ctx.loc.bufnr
+  local bufnr = s.bufnr
+  if shared.widen_window then
+    shared.widen_window(s)
+  end
   if not vim.api.nvim_buf_is_valid(bufnr) then
     return
   end
@@ -344,16 +347,92 @@ local function unnarrowed_region(s)
   return s.region:rows()
 end
 
+local remove_unnarrowed
+
+--- Run the store filters (`M.store_filters`) over the text of an in-place
+--- capture, as `M.store` does for a capture buffer: rewritten text
+--- replaces the captured lines, and an entry a filter sends elsewhere is
+--- stored there and then taken out of this target (as an abort would).
+--- Returns true when the entry went elsewhere, with its (bufnr, line), or
+--- nil ones when storing it there failed (the capture stays open).
+---@return boolean moved, integer|nil bufnr, integer|nil line
+local function filter_in_place(s)
+  if not s.in_place or next(M.store_filters) == nil then
+    return false
+  end
+  local bufnr = s.bufnr
+  local first, last = s.region:rows()
+  if not first then
+    return false
+  end
+  local lines = vim.api.nvim_buf_get_lines(bufnr, first - 1, last, false)
+  local a, b = 1, #lines
+  while a <= b and is_blank(lines[a]) do
+    a = a + 1
+  end
+  while b >= a and is_blank(lines[b]) do
+    b = b - 1
+  end
+  if a > b then
+    return false
+  end
+  local text, changed, target = vim.list_slice(lines, a, b), false, nil
+  for name, filter in pairs(M.store_filters) do
+    local ok, res, t = pcall(filter, s.template, text, s.ctx)
+    if not ok then
+      utils.error("Capture filter " .. name .. " failed: " .. tostring(res))
+    elseif type(res) == "table" then
+      text, changed = res, true
+      if type(t) == "table" and not s.ctx.here then
+        target = t
+      end
+    end
+  end
+  if target then
+    local loc, err = M.resolve_target(target, {})
+    if loc then
+      local ctx = s.ctx
+      local old = ctx.loc
+      ctx.loc = loc
+      ctx.skip_filters = true
+      local dbuf, dline = M.store(s.template, text, ctx)
+      ctx.skip_filters = nil
+      if not dbuf then
+        ctx.loc = old
+        cleanup_target(loc)
+        release(loc)
+        return true, nil
+      end
+      remove_unnarrowed(s)
+      cleanup_target(old)
+      release(old)
+      s.moved_from = old
+      return true, dbuf, dline
+    end
+    utils.warn(tostring(err) .. "; the template's target is used")
+  end
+  if changed then
+    -- replace the text, not the lines: the marks of the capture stay valid
+    local r0, r1 = first + a - 2, first + b - 2
+    vim.api.nvim_buf_set_text(bufnr, r0, 0, r1, #lines[b], text)
+  end
+  return false
+end
+
 --- Finalize an unnarrowed capture: its text is already in the target, so
 --- only the finishing steps of `M.store` remain. The capture stays open
 --- when the text is empty or the target can't be saved.
 ---@return integer|nil bufnr, integer|nil line
 local function store_unnarrowed(s)
   local tpl, ctx = s.template, s.ctx
-  local bufnr = ctx.loc.bufnr
+  local bufnr = s.bufnr
   if not vim.api.nvim_buf_is_valid(bufnr) then
     utils.warn("Capture target buffer is gone")
     return nil
+  end
+  local moved, mbuf, mline = filter_in_place(s)
+  if moved then
+    return mbuf, mline
   end
   local first, last = unnarrowed_region(s)
   local lines = first and vim.api.nvim_buf_get_lines(bufnr, first - 1, last, false) or {}
@@ -392,8 +471,8 @@ end
 --- Abort an unnarrowed capture: the lines its placement changed (the
 --- text, as edited since, and the blank lines around it) get their
 --- original text back. Edits elsewhere in the target are kept.
-local function remove_unnarrowed(s)
-  local bufnr = s.ctx.loc.bufnr
+function remove_unnarrowed(s)
+  local bufnr = s.bufnr
   local c = s.change
   if not (c and vim.api.nvim_buf_is_valid(bufnr)) then
     return
@@ -440,6 +519,13 @@ function M.finalize(buf, opts)
     return
   end
   close_session(buf)
+  local old = s.moved_from
+  if old and old.new_buffer and vim.api.nvim_buf_is_valid(old.bufnr) and old.bufnr ~= dbuf then
+    -- a store filter sent the entry elsewhere: unload the target loaded for it
+    if not vim.bo[old.bufnr].modified and vim.fn.bufwinid(old.bufnr) == -1 then
+      pcall(vim.api.nvim_buf_delete, old.bufnr, {})
+    end
+  end
   if opts.refile then
     local refile = require("org.refile")
     local rbuf, rline = refile.refile({ bufnr = dbuf, lnum = dline }, { targets = tpl.refile_targets })
