@@ -252,10 +252,21 @@ function M.cycle_limit_level()
   end
 end
 
+--- The command loop keeps point out of invisible text; Vim leaves the
+--- cursor inside a closed fold (after G or a search), so move it to the
+--- line that shows the fold.
+local function cursor_to_shown_line()
+  local shown = vim.fn.foldclosed(".")
+  if shown ~= -1 and shown ~= vim.fn.line(".") then
+    vim.api.nvim_win_set_cursor(0, { shown, 0 })
+  end
+end
+
 --- TAB. With a count: 16 restores the startup visibility, 64 shows
 --- everything (drawers too), any other N shows the whole subtree of the
 --- ancestor at level N (like C-u C-u TAB, C-u C-u C-u TAB and M-N TAB).
 function M.cycle()
+  cursor_to_shown_line()
   if (config.opts.links or {}).tab_follows_link and require("org.links").link_at_cursor() then
     -- org-tab-follows-link: TAB on a link follows it
     return require("org.context").open_at_point()

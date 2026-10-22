@@ -48,6 +48,20 @@ describe("fold: cycling", function()
     eq(1, vim.fn.foldclosed(1))
   end)
 
+  -- Emacs keeps point out of invisible text, so TAB acts on the visible
+  -- heading; Vim lets the cursor sit inside a closed fold (after G or a search)
+  it("cycles the visible heading when the cursor is inside a closed fold", function()
+    local buf = org_buffer({ "* A", "** B", "b body", "** C" }, { 1, 0 })
+    fold.setup_buffer(buf)
+    fold.overview()
+    vim.api.nvim_win_set_cursor(0, { 4, 0 })
+    eq(1, vim.fn.foldclosed(4))
+    fold.cycle()
+    eq({ 1, 0 }, vim.api.nvim_win_get_cursor(0))
+    eq(-1, vim.fn.foldclosed(1))
+    eq(2, vim.fn.foldclosed(2))
+  end)
+
   -- Emacs org-cycle-emulate-tab: TAB in body text indents the line, or
   -- with it off cycles the entry
   it("indents body text, or cycles the entry without cycle_emulate_tab", function()
