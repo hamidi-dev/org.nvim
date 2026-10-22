@@ -120,7 +120,8 @@ local FAKE_PSQL = [==[
 import sys, os, re
 tables = {}
 tuples = False
-print("argv: " + " ".join(sys.argv[1:]) + " pw=" + os.environ.get("PGPASSWORD", ""))
+with open(os.environ["ORG_FAKE_LOG"], "w") as f:
+    f.write("argv: " + " ".join(sys.argv[1:]) + " pw=" + os.environ.get("PGPASSWORD", "") + "\n")
 def run(path):
     global tuples
     for l in open(path).read().split("\n"):
@@ -236,9 +237,16 @@ describe("babel :session for SQL", function()
     if not has("python3") then
       return
     end
-    local _, dir = fake("psql", FAKE_PSQL)
-    local path = vim.env.PATH
-    vim.env.PATH = dir .. ":" .. path
+    -- the fake by its path: CI runners have a real psql on $PATH
+    local psql = fake("psql", FAKE_PSQL)
+    local log = vim.fn.tempname()
+    vim.env.ORG_FAKE_LOG = log
+    local command = sql.command
+    sql.command = function(lang, args)
+      local argv = command(lang, args)
+      argv[1] = psql
+      return argv
+    end
     local buf = run_all({
       "#+begin_src sql :engine postgresql :session pg :dbhost h1 :dbport 5433 :dbuser me :dbpassword sec :database db1",
       "create temp table pets(a int, b text);",
@@ -252,14 +260,17 @@ describe("babel :session for SQL", function()
       "select * from pets",
       "#+end_src",
     })
-    vim.env.PATH = path
+    sql.command = command
+    vim.env.ORG_FAKE_LOG = nil
     local t = text(buf)
     ok(t:find("#+RESULTS:\n| CREATE TABLE |", 1, true), t)
     ok(t:find("| a | b   |\n|---+-----|\n| 1 | one |\n| 2 | two |", 1, true), t)
     ok(t:find("#+RESULTS:\n| 1 | one |\n| 2 | two |", 1, true), t)
-    local sess = session.find("sql", "pg")
-    local screen = table.concat(vim.api.nvim_buf_get_lines(sess.buf, 0, -1, false), "\n")
-    ok(screen:find("argv: -h h1 -p 5433 -U me -d db1 pw=sec", 1, true), screen)
+    -- what the client was started with (not read from the terminal
+    -- buffer, which may not be redrawn yet)
+    local started = table.concat(vim.fn.readfile(log), "\n")
+    eq("argv: -h h1 -p 5433 -U me -d db1 pw=sec", started)
+    os.remove(log)
   end)
 
   -- a real server: ORG_TEST_MYSQL=host:port (user root, no password, a
