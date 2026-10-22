@@ -515,6 +515,36 @@ describe("agenda buffers and windows", function()
     eq({ "DONE", "TODO" }, view.todo_names())
   end)
 
+  -- #288: Vim never passes a count of 0, so the hint's ‘0 r’ for ALL did nothing
+  it("0 r redoes the TODO list with every keyword", function()
+    open({ "* TODO Something", "* CANCELLED Something else" }, {
+      todo_keywords = { "TODO", "|", "DONE", "CANCELLED" },
+    }, { type = "todo" })
+    local function sel()
+      return vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]:match("type: (.*)$")
+    end
+    eq("ALL", sel())
+    vim.api.nvim_feedkeys("1r", "xt", false)
+    eq("CANCELLED", sel())
+    vim.api.nvim_feedkeys("0r", "xt", false)
+    eq("ALL", sel())
+    -- a 0 typed after a count digit stays part of the count
+    local seen
+    with_stubs({
+      {
+        view.actions,
+        "redo",
+        function()
+          seen = { vim.v.count, view.redo_zero_count }
+        end,
+      },
+    }, function()
+      vim.api.nvim_feedkeys("10r", "xt", false)
+    end)
+    eq({ 10, nil }, seen)
+    view.quit(true)
+  end)
+
   it("x kills the buffers the agenda loaded", function()
     utils.writefile(path, lines)
     local b = utils.find_buffer(path)

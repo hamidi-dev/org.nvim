@@ -211,6 +211,15 @@ local function setup_mappings(buf)
       end
     end
   end
+  -- `0 r`: Vim reads a leading 0 as a motion, never as a count, so the
+  -- TODO list's "(0)[ALL]" gets its own key (a count before it still
+  -- counts: Vim doesn't map a 0 typed after a count digit)
+  for _, lhs in ipairs(config.lhs_list(maps.redo)) do
+    vim.keymap.set("n", "0" .. lhs, function()
+      M.redo_zero_count = true
+      M.run_action("redo")
+    end, { buffer = buf, desc = "org agenda: redo with count 0 (all TODO keywords)" })
+  end
   -- org-mouse (mouse.org_mouse): the context menu and gestures; the
   -- module loads only when it is on
   if (config.opts.mouse or {}).org_mouse == true then
