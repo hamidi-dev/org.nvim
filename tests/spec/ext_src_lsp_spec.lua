@@ -473,6 +473,25 @@ describe("src_lsp extension", function()
     eq(false, vim.api.nvim_buf_is_valid(hidden))
   end)
 
+  it("wipes an org buffer while its servers are still starting", function()
+    -- a server of its own, so no running client is reused
+    setup({ languages = { lua = { servers = { vim.tbl_extend("force", FAKE, { name = "fake_lua_new" }) } } } })
+    local buf = open(main)
+    -- the proxy is ready at once: wiping the buffer can't race its didOpen
+    local p = vim.lsp.get_clients({ bufnr = buf, name = "org_src" })[1]
+    ok(p and p.initialized, "proxy initialized")
+    local hidden = group(buf).hidden
+    local fake = vim.lsp.get_clients({ bufnr = hidden, name = "fake_lua_new", _uninitialized = true })[1]
+    ok(fake and not fake.initialized, "fake server still starting")
+    -- Neovim 0.11.0 failed here in vim.lsp's change tracking
+    vim.cmd("bwipeout! " .. buf)
+    eq(false, vim.api.nvim_buf_is_valid(hidden))
+    vim.wait(3000, function()
+      return fake.initialized == true
+    end, 5)
+    eq(nil, fake.attached_buffers[hidden])
+  end)
+
   it("health lists the servers of each language", function()
     local out = {}
     local h = {}

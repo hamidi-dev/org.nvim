@@ -396,6 +396,14 @@ function M.cmd(dispatchers)
         pcall(notify_reply_callback, id)
       end
     end
+    if method == "initialize" then
+      -- answered at once: the client is initialized before vim.lsp.start
+      -- returns, so the org buffer gets its didOpen right away. On 0.11.0,
+      -- wiping a buffer whose client has not sent didOpen yet fails in
+      -- vim.lsp's change tracking.
+      reply(nil, { capabilities = M.capabilities(), serverInfo = { name = "org.nvim src blocks" } })
+      return true, id
+    end
     vim.schedule(function()
       local ok, err = pcall(function()
         if method == "initialize" then

@@ -490,6 +490,18 @@ function M.attach(buf)
   M.refresh(st)
 end
 
+--- Take a buffer off the clients still starting up: they haven't sent
+--- didOpen, and on Neovim 0.11.0 deleting the buffer would then fail in
+--- vim.lsp's change tracking (and the client would open it once started).
+---@param buf integer
+function M.forget_uninitialized(buf)
+  for _, c in ipairs(vim.lsp.get_clients({ bufnr = buf, _uninitialized = true })) do
+    if not c.initialized then
+      c.attached_buffers[buf] = nil
+    end
+  end
+end
+
 --- Stop watching an org buffer and delete its hidden buffers.
 ---@param buf integer
 function M.dispose(buf)
@@ -507,6 +519,7 @@ function M.dispose(buf)
   for _, g in pairs(st.groups) do
     M.owners[g.hidden] = nil
     if api.nvim_buf_is_valid(g.hidden) then
+      M.forget_uninitialized(g.hidden)
       pcall(api.nvim_buf_delete, g.hidden, { force = true })
     end
   end
