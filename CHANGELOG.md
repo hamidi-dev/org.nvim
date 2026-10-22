@@ -8,6 +8,12 @@ pull request, by its [Conventional Commits](https://www.conventionalcommits.org/
 This file is generated from the git history by `make changelog`
 (`scripts/changelog.lua`); edit the pull request titles, not this file.
 
+## [v2.16.0] - 2026-10-22
+
+### Features
+
+- LSP completion/formatting/hints/lenses, src block LSP, sticky context, plugin adapters, more Babel sessions, in-place capture and [#285](https://github.com/xheisenbugx/org.nvim/pull/285) follow-ups ([#287](https://github.com/xheisenbugx/org.nvim/pull/287))
+
 ## [v2.15.0] - 2026-10-21
 
 ### Features
@@ -523,6 +529,7 @@ This file is generated from the git history by `make changelog`
 
 </details>
 
+[v2.16.0]: https://github.com/xheisenbugx/org.nvim/compare/v2.15.0...v2.16.0
 [v2.15.0]: https://github.com/xheisenbugx/org.nvim/compare/v2.14.4...v2.15.0
 [v2.14.4]: https://github.com/xheisenbugx/org.nvim/compare/v2.14.3...v2.14.4
 [v2.14.3]: https://github.com/xheisenbugx/org.nvim/compare/v2.14.2...v2.14.3

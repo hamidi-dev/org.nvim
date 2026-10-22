@@ -337,6 +337,69 @@ function M.open_file(path, o)
   return open_file_link(path, nil, o)
 end
 
+-- Document viewers that open a file at a page, tried in order when
+-- `links.docview_command` is nil: the first one installed is used.
+local DOCVIEW_VIEWERS = {
+  { "zathura", "zathura --page=%p %s" },
+  { "okular", "okular -p %p %s" },
+  { "evince", "evince --page-index=%p %s" },
+  { "qpdfview", "qpdfview %s#%p" },
+  { "mupdf", "mupdf %s %p" },
+  { "SumatraPDF", "SumatraPDF -page %p %s" },
+}
+M.DOCVIEW_VIEWERS = DOCVIEW_VIEWERS
+
+--- The command docview: links open a page with: `links.docview_command`
+--- when set (false: none), else the first installed viewer of
+--- DOCVIEW_VIEWERS; nil when there is none.
+---@return string|fun(file: string, page: integer)|nil
+function M.docview_command()
+  local cmd = lopts().docview_command
+  if cmd ~= nil then
+    return cmd or nil
+  end
+  for _, v in ipairs(DOCVIEW_VIEWERS) do
+    if vim.fn.executable(v[1]) == 1 then
+      return v[2]
+    end
+  end
+  return nil
+end
+
+--- Follow `docview:FILE::PAGE` (org-docview-open): FILE must exist. With
+--- a PAGE the docview command opens the file at that page; without one,
+--- or with no command, it opens like a file: link.
+---@param path string
+---@param bufnr integer
+---@param how any
+---@param arg integer
+local function open_docview(path, bufnr, how, arg)
+  -- "\\(.*?\\)\\(?:::\\([0-9]+\\)\\)?$": only digits make a page
+  local file, page = path:match("^(.-)::(%d+)$")
+  file = file or path
+  local full = M.file_link_path(file, bufnr)
+  if not utils.exists(full) then
+    utils.error("No such file: " .. file)
+    return false
+  end
+  local cmd = page and arg < 16 and M.docview_command()
+  if not cmd then
+    return open_file_link(full, nil, { bufnr = bufnr, how = how, app = arg >= 16 and "system" or nil })
+  end
+  if type(cmd) == "function" then
+    cmd(full, tonumber(page) --[[@as integer]])
+    return true
+  end
+  local argv = vim.tbl_map(function(w)
+    -- a function: `%` in the file name is not a capture reference
+    return (w:gsub("%%([sp])", function(c)
+      return c == "s" and full or page
+    end))
+  end, vim.split(cmd, "%s+", { trimempty = true }))
+  vim.system(argv, { detach = true })
+  return true
+end
+
 --- Show an internal link's buffer in another window (C-u C-c C-o).
 local function other_window_same_buffer()
   local buf = vim.api.nvim_get_current_buf()
@@ -411,9 +474,15 @@ function M.open(target, opts)
   local t = link.type
   if t == "http" or t == "https" or t == "ftp" or t == "mailto" or t == "news" or t == "irc" then
     return vim.ui.open(expanded)
+  elseif t == "eww" or t == "w3m" then
+    -- org-eww-open browses the URL in eww (emacs-w3m for w3m:); here the
+    -- system opener opens it like an http: link
+    return vim.ui.open(link.path)
   elseif t == "doi" then
     return vim.ui.open((lopts().doi_server_url or "https://doi.org/") .. link.path)
-  elseif t == "file" or t == "file+sys" or t == "file+emacs" or t == "docview" or t == "bibtex" then
+  elseif t == "docview" then
+    return open_docview(link.path, bufnr, how, arg)
+  elseif t == "file" or t == "file+sys" or t == "file+emacs" or t == "bibtex" then
     local path, search = link.path, nil
     local p, s = link.path:match("^(.-)::(.*)$")
     if p then

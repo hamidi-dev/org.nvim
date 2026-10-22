@@ -211,8 +211,11 @@ local function setup_mappings(buf)
       end
     end
   end
-  -- org-mouse (mouse.org_mouse): the context menu and gestures
-  require("org.org_mouse").attach_agenda(buf)
+  -- org-mouse (mouse.org_mouse): the context menu and gestures; the
+  -- module loads only when it is on
+  if (config.opts.mouse or {}).org_mouse == true then
+    require("org.org_mouse").attach_agenda(buf)
+  end
 end
 
 shared.setup_mappings = setup_mappings

@@ -369,7 +369,7 @@ local function use_async(args, lang, opts)
     return false
   end
   local fam = langs.family(lang)
-  local in_session = session_mod.name(args.session) ~= nil and session_mod.supported(lang, fam)
+  local in_session = session_mod.name(args.session) ~= nil and session_mod.supported(lang, session_mod.family(lang))
   if fam == "lua" and (in_session or not langs.lua_external()) then
     return false
   end

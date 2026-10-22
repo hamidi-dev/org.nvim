@@ -1937,12 +1937,12 @@ ob-C	org-babel-execute:C++	exec	done	babel.languages['C++'] (g++); exec.lua c_co
 ob-C	org-babel-execute:D	exec	done	babel.languages.D (rdmd); exec.lua c_compiler	ob-C's D path, same code as C/C++ (no D-only spec)	-
 ob-C	org-babel-execute:cpp	exec	done	babel.languages.cpp (g++); exec.lua c_compiler	ob-C alias of C++; babel_parity_spec	-
 ob-R	org-babel-execute:R	exec	done	babel.languages.R (Rscript); langs.lua family r	babel_repl_spec	-
-ob-awk	org-babel-execute:awk	exec	partial	babel.languages.awk (awk -f)	runs the body with awk -f, but ignores :var (awk -v), :stdin, :cmd-line and :in-file; Emacs probe: `:var x=5 :stdin tbl` gives a table, org.nvim no result; no spec	-
+ob-awk	org-babel-execute:awk	exec	done	babel.languages.awk (awk); babel/lang/awk.lua	ob-awk: -f SCRIPT :cmd-line -v NAME='VALUE' :in-file, :stdin ref, :prologue/:epilogue; babel_ob_misc_spec checked against Emacs with a fake awk	-
 ob-calc	org-babel-execute:calc	exec	done	babel.languages.calc (Lua Calc); babel/lang/calc.lua	ob-calc: :var push, stack keys; babel_ob_calc_spec (Emacs output)	-
 ob-clojure	org-babel-execute:clojure	exec	done	babel/lang/clojure.lua (ob.lua HANDLERS)	babel_ob_clojure_spec	-
 ob-clojure	org-babel-execute:clojurescript	exec	done	babel/lang/clojure.lua (ob.lua HANDLERS)	nbb backend; babel_ob_clojure_spec	-
 ob-csharp	org-babel-execute:csharp	exec	done	babel/lang/csharp.lua	babel_ob_csharp_spec	-
-ob-css	org-babel-execute:css	exec	missing	-	ob-css returns the body as the result; org.nvim errors "No org-babel-execute function for css"	-
+ob-css	org-babel-execute:css	exec	done	babel.languages.css; babel/lang/body.lua	ob-css: the body is the result; babel_ob_misc_spec	-
 ob-ditaa	org-babel-execute:ditaa	exec	done	babel/lang/ditaa.lua	babel_ob_ditaa_spec	-
 ob-dot	org-babel-execute:dot	exec	done	babel.languages.dot (dot); babel/lang/dot.lua	ob-dot: :file :cmd :cmdline; babel_ob_tools_spec with fake dot	-
 ob-emacs-lisp	org-babel-execute:elisp	exec	done	babel/elisp.lua (emacs --batch, else the formula interpreter)	babel_elisp_spec	-
@@ -1960,12 +1960,12 @@ ob-latex	org-babel-execute:latex	exec	done	babel/lang/latex.lua	babel_ob_latex_s
 ob-lilypond	org-babel-execute:lilypond	exec	done	babel/lang/lilypond.lua	babel_ob_lilypond_spec	-
 ob-lisp	org-babel-execute:lisp	exec	done	babel/lang/lisp.lua	sbcl --script in place of SLIME (org-babel-lisp-eval-fn is partial); babel_ob_lisp_spec	-
 ob-lua	org-babel-execute:lua	exec	done	babel.languages.lua (in Neovim, or cmd); langs.run_lua	babel_emacs_spec	-
-ob-makefile	org-babel-execute:makefile	exec	missing	-	ob-makefile returns the body as the result; org.nvim errors "No org-babel-execute function for makefile"	-
+ob-makefile	org-babel-execute:makefile	exec	done	babel.languages.makefile; babel/lang/body.lua	ob-makefile: the body is the result; babel_ob_misc_spec	-
 ob-maxima	org-babel-execute:maxima	exec	done	babel/lang/maxima.lua	babel_ob_scripts_spec	-
 ob-ocaml	org-babel-execute:ocaml	exec	done	babel/lang/ocaml.lua	babel_ob_scripts_spec	-
 ob-octave	org-babel-execute:matlab	exec	done	babel.languages.matlab (matlab); babel/lang/octave.lua	ob-octave matlab path; no sessions; babel_ob_tools_spec with fake matlab	-
 ob-octave	org-babel-execute:octave	exec	done	babel.languages.octave (octave); babel/lang/octave.lua	ob-octave: value wrapper, graphics :file; no sessions; babel_ob_tools_spec with fake octave	-
-ob-org	org-babel-execute:org	exec	missing	-	ob-org: the body (with $var expansion) as raw Org, or exported with :results latex/html/ascii; org.nvim errors "No org-babel-execute function for org"	-
+ob-org	org-babel-execute:org	exec	done	babel.languages.org (raw silent); babel/lang/org.lua	ob-org: $var expansion, leading commas removed, :results latex/html/ascii body-only export; babel_ob_misc_spec checked against Emacs	-
 ob-perl	org-babel-execute:perl	exec	done	babel.languages.perl; langs.lua family perl	babel_var_spec	-
 ob-plantuml	org-babel-execute:plantuml	exec	done	babel/lang/plantuml.lua	babel_ob_plantuml_spec	-
 ob-processing	org-babel-execute:processing	exec	done	babel/lang/processing.lua	babel_ob_processing_screen_spec	-
@@ -1992,27 +1992,27 @@ ol	link:elisp	link	done	links/shell.lua open_elisp	asks, then evaluates in emacs
 ol	link:file	link	done	links/open.lua open_file_link	links_follow_spec, links_parity_spec	-
 ol	link:file+emacs	link	done	links/open.lua open_file_link (app vim)	opens in Neovim, as Emacs opens in Emacs; export_emacs_spec	-
 ol	link:file+sys	link	done	links/open.lua open_file_link (app system)	the system application; export_emacs_spec, lint_spec	-
-ol	link:ftp	link	done	links/open.lua: vim.ui.open, the same branch as http:	no ftp:-specific spec	-
+ol	link:ftp	link	done	links/open.lua: vim.ui.open, the same branch as http:	tests/spec/links_external_types_spec.lua	-
 ol	link:help	link	vim	links/open.lua: :help	opens Neovim's :help for the tag; Emacs describes a Lisp function or variable	-
 ol	link:http	link	done	links/open.lua: vim.ui.open	links_parity_spec	-
 ol	link:https	link	done	links/open.lua: vim.ui.open	links_parity_spec	-
 ol	link:mailto	link	done	links/open.lua: vim.ui.open, the same branch as http:	the system mail handler (Emacs: compose-mail)	-
-ol	link:news	link	done	links/open.lua: vim.ui.open, the same branch as http:	no news:-specific spec	-
+ol	link:news	link	done	links/open.lua: vim.ui.open, the same branch as http:	tests/spec/links_external_types_spec.lua	-
 ol	link:shell	link	done	links/shell.lua open_shell	links_parity_spec	-
 ol	link:shortdoc	link	emacs-only	-	Emacs shortdoc function groups	-
 ol-bbdb	link:bbdb	link	emacs-only	-	BBDB contact database	-
 ol-bibtex	link:bibtex	link	done	links/open.lua (file with ::key search); ol-bibtex store	bibtex_emacs_spec	-
-ol-docview	link:docview	link	partial	links/open.lua (as a file:)	opens the file, but drops ::PAGE (Emacs opens DocView at that page); no spec	-
+ol-docview	link:docview	link	done	links/open.lua: open_docview, links.docview_command (%s/%p; default the first installed of zathura/okular/evince/...); export/ox/links.lua: org-docview-export	opens the page in an external viewer (Emacs: a DocView buffer); without a page or a viewer, like file:; tests/spec/links_external_types_spec.lua	-
 ol-doi	link:doi	link	done	links/open.lua: link.doi_server_url	links_parity_spec	-
 ol-eshell	link:eshell	link	emacs-only	-	runs a command in Eshell	-
-ol-eww	link:eww	link	missing	-	Emacs browses the URL in eww; org.nvim does not know the type (could open it like http:)	-
+ol-eww	link:eww	link	done	links/open.lua: the URL with vim.ui.open; store.lua: a netrw https:// buffer stores its URL; exported like Emacs	Emacs browses in eww; tests/spec/links_external_types_spec.lua	-
 ol-gnus	link:gnus	link	emacs-only	-	Gnus	-
-ol-info	link:info	link	done	links/open.lua: info(1) in a terminal	Emacs opens its Info reader; no info:-follow spec	-
-ol-irc	link:irc	link	done	links/open.lua: vim.ui.open, the same branch as http:	the system irc:// handler (Emacs: ERC/rcirc); no irc:-specific spec	-
+ol-info	link:info	link	done	links/open.lua: info(1) in a terminal	Emacs opens its Info reader; tests/spec/links_external_types_spec.lua	-
+ol-irc	link:irc	link	done	links/open.lua: vim.ui.open, the same branch as http:	the system irc:// handler (Emacs: ERC/rcirc); tests/spec/links_external_types_spec.lua	-
 ol-man	link:man	link	done	links/open.lua: :Man	links_follow_spec	-
 ol-mhe	link:mhe	link	emacs-only	-	MH-E mail reader	-
 ol-rmail	link:rmail	link	emacs-only	-	Rmail	-
-ol-w3m	link:w3m	link	missing	-	Emacs browses the URL in emacs-w3m; org.nvim does not know the type (could open it like http:)	-
+ol-w3m	link:w3m	link	done	links/open.lua: the URL with vim.ui.open; store.lua: a netrw https:// buffer stores its URL; exported like Emacs	Emacs browses in emacs-w3m; tests/spec/links_external_types_spec.lua	-
 org-attach	link:attachment	link	done	links/open.lua: org.attach resolve_attachment	attach_spec	-
 org-id	link:id	link	done	links/open.lua: find_id_link	links_parity_spec, api_spec	-
 ox-ascii	ascii:bold	trans	done	export/ascii/backend.lua	export_ascii_spec, emacs_export_parity_spec	-

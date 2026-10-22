@@ -644,6 +644,11 @@
 ---Window used for the capture buffer; Emacs splits the frame.
 ---(default: `"split"`)
 ---@field window? "float"|"split"|"vsplit"|"tab"|"current"
+---Insert the template into the target when the capture starts and edit it
+---there, in a window showing only the new entry, like Emacs's narrowed
+---capture buffer; `false` edits it in a separate buffer stored at the target
+---on finalize. (default: `false`)
+---@field in_place? boolean
 ---The global capture key in the agenda uses the date at point (count 1: with
 ---the time of the item at point) (org-capture-use-agenda-date). (default: `false`)
 ---@field use_agenda_date? boolean

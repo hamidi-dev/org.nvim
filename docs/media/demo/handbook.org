@@ -1,0 +1,86 @@
+#+TITLE: Team handbook
+
+* TODO [#A] Product launch :work:
+Launch, paragraph 1: notes, decisions and the links that go with them.
+Launch, paragraph 2: notes, decisions and the links that go with them.
+** NEXT Marketing plan :marketing:
+Marketing, paragraph 1: notes, decisions and the links that go with them.
+Marketing, paragraph 2: notes, decisions and the links that go with them.
+Marketing, paragraph 3: notes, decisions and the links that go with them.
+*** DONE Write the [[https://example.com/brief][brief]]
+Brief, paragraph 1: notes, decisions and the links that go with them.
+Brief, paragraph 2: notes, decisions and the links that go with them.
+Brief, paragraph 3: notes, decisions and the links that go with them.
+Brief, paragraph 4: notes, decisions and the links that go with them.
+Brief, paragraph 5: notes, decisions and the links that go with them.
+Brief, paragraph 6: notes, decisions and the links that go with them.
+Brief, paragraph 7: notes, decisions and the links that go with them.
+Brief, paragraph 8: notes, decisions and the links that go with them.
+Brief, paragraph 9: notes, decisions and the links that go with them.
+*** TODO Press kit :design:
+Press kit, paragraph 1: notes, decisions and the links that go with them.
+Press kit, paragraph 2: notes, decisions and the links that go with them.
+Press kit, paragraph 3: notes, decisions and the links that go with them.
+Press kit, paragraph 4: notes, decisions and the links that go with them.
+Press kit, paragraph 5: notes, decisions and the links that go with them.
+Press kit, paragraph 6: notes, decisions and the links that go with them.
+Press kit, paragraph 7: notes, decisions and the links that go with them.
+Press kit, paragraph 8: notes, decisions and the links that go with them.
+Press kit, paragraph 9: notes, decisions and the links that go with them.
+** WAITING [#B] Engineering :dev:
+Engineering, paragraph 1: notes, decisions and the links that go with them.
+Engineering, paragraph 2: notes, decisions and the links that go with them.
+Engineering, paragraph 3: notes, decisions and the links that go with them.
+*** NEXT Release checklist
+Checklist, paragraph 1: notes, decisions and the links that go with them.
+Checklist, paragraph 2: notes, decisions and the links that go with them.
+Checklist, paragraph 3: notes, decisions and the links that go with them.
+Checklist, paragraph 4: notes, decisions and the links that go with them.
+**** TODO Freeze the API
+API freeze, paragraph 1: notes, decisions and the links that go with them.
+API freeze, paragraph 2: notes, decisions and the links that go with them.
+API freeze, paragraph 3: notes, decisions and the links that go with them.
+API freeze, paragraph 4: notes, decisions and the links that go with them.
+API freeze, paragraph 5: notes, decisions and the links that go with them.
+API freeze, paragraph 6: notes, decisions and the links that go with them.
+API freeze, paragraph 7: notes, decisions and the links that go with them.
+API freeze, paragraph 8: notes, decisions and the links that go with them.
+API freeze, paragraph 9: notes, decisions and the links that go with them.
+API freeze, paragraph 10: notes, decisions and the links that go with them.
+**** TODO Load tests
+Load tests, paragraph 1: notes, decisions and the links that go with them.
+Load tests, paragraph 2: notes, decisions and the links that go with them.
+Load tests, paragraph 3: notes, decisions and the links that go with them.
+Load tests, paragraph 4: notes, decisions and the links that go with them.
+Load tests, paragraph 5: notes, decisions and the links that go with them.
+Load tests, paragraph 6: notes, decisions and the links that go with them.
+Load tests, paragraph 7: notes, decisions and the links that go with them.
+Load tests, paragraph 8: notes, decisions and the links that go with them.
+Load tests, paragraph 9: notes, decisions and the links that go with them.
+Load tests, paragraph 10: notes, decisions and the links that go with them.
+* Operations :ops:
+Operations, paragraph 1: notes, decisions and the links that go with them.
+Operations, paragraph 2: notes, decisions and the links that go with them.
+Operations, paragraph 3: notes, decisions and the links that go with them.
+** Hiring
+Hiring, paragraph 1: notes, decisions and the links that go with them.
+Hiring, paragraph 2: notes, decisions and the links that go with them.
+Hiring, paragraph 3: notes, decisions and the links that go with them.
+Hiring, paragraph 4: notes, decisions and the links that go with them.
+Hiring, paragraph 5: notes, decisions and the links that go with them.
+Hiring, paragraph 6: notes, decisions and the links that go with them.
+Hiring, paragraph 7: notes, decisions and the links that go with them.
+Hiring, paragraph 8: notes, decisions and the links that go with them.
+Hiring, paragraph 9: notes, decisions and the links that go with them.
+Hiring, paragraph 10: notes, decisions and the links that go with them.
+** Budget
+Budget, paragraph 1: notes, decisions and the links that go with them.
+Budget, paragraph 2: notes, decisions and the links that go with them.
+Budget, paragraph 3: notes, decisions and the links that go with them.
+Budget, paragraph 4: notes, decisions and the links that go with them.
+Budget, paragraph 5: notes, decisions and the links that go with them.
+Budget, paragraph 6: notes, decisions and the links that go with them.
+Budget, paragraph 7: notes, decisions and the links that go with them.
+Budget, paragraph 8: notes, decisions and the links that go with them.
+Budget, paragraph 9: notes, decisions and the links that go with them.
+Budget, paragraph 10: notes, decisions and the links that go with them.

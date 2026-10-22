@@ -1,0 +1,20 @@
+screen 72x16
+|{1:* Inbox}|
+|{2:** }{3:TODO}{2: Old task}|
+|Notes about it.|
+|{2:** }{3:TODO}{2: Buy milk}|
+|two litres|
+|{4:[2026-10-21 Wed 09:30]}|
+|{1:* Projects}|
+|{5:                                                                        }|
+|{6: Capture: finish <C-c><C-c>  refile <C-c><C-w>  abort <C-c><C-k>        }|
+|{2:** }{3:TODO}{2: Buy milk}|
+|two litres|
+|{4:[2026-10-21 Wed 09:30]}|
+
+{1} OrgHeadlineLevel1 -> Title [bold]
+{2} OrgHeadlineLevel2 -> Constant
+{3} OrgTodo -> @comment.error
+{4} OrgTimestampInactive -> Comment
+{5} StatusLineNC | StatusLine
+{6} WinBar [bold]

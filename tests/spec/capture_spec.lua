@@ -16,6 +16,11 @@ local function base_setup(extra)
   require("org.id")._reset()
 end
 
+--- Captures edited in a separate capture buffer (capture.in_place = false).
+local function buffer_setup(extra)
+  base_setup(vim.tbl_deep_extend("force", { capture = { in_place = false } }, extra or {}))
+end
+
 local function tmpfile(lines)
   local p = vim.fn.tempname() .. ".org"
   if lines then
@@ -607,7 +612,6 @@ describe("capture targets", function()
     -- clocking out during the capture keeps the target
     local buf = run(capture.capture, { target = "clock", template = "* Later" })
     clock.clock_cancel()
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "* Later" })
     run(capture.finalize, buf, { jump = false })
     lines = file_lines(p)
     eq("** Later", lines[#lines - 1])
@@ -692,14 +696,14 @@ describe("capture targets", function()
   end)
 end)
 
-describe("capture buffer", function()
+describe("capture buffer (capture.in_place = false)", function()
   before_each(function()
-    base_setup()
+    buffer_setup()
   end)
 
   it("opens a split buffer and finalizes into the target", function()
     local p = tmpfile({ "* Inbox" })
-    base_setup({
+    buffer_setup({
       capture = { templates = { t = { description = "Task", template = "* TODO %?", target = p, headline = "Inbox" } } },
     })
     local wins = #vim.api.nvim_list_wins()
@@ -718,7 +722,7 @@ describe("capture buffer", function()
 
   it("keeps the text when the target is gone", function()
     local p = tmpfile({ "* A", ":PROPERTIES:", ":ID: gone-1", ":END:", "* B" })
-    base_setup({ agenda_files = { p } })
+    buffer_setup({ agenda_files = { p } })
     local buf = run(capture.capture, { id = "gone-1", template = "* Note" })
     local tb = utils.find_buffer(p)
     vim.api.nvim_buf_set_lines(tb, 0, 4, false, {})
@@ -731,7 +735,7 @@ describe("capture buffer", function()
 
   it("kill discards the capture and the headline created for it", function()
     local p = tmpfile({ "* Inbox" })
-    base_setup({ capture = { templates = { t = { template = "* X", target = p, headline = "New" } } } })
+    buffer_setup({ capture = { templates = { t = { template = "* X", target = p, headline = "New" } } } })
     local buf = run(capture.capture, "t")
     eq({ "* Inbox", "* New" }, file_lines(p))
     capture.kill(buf)
@@ -740,7 +744,7 @@ describe("capture buffer", function()
 
   it("a cancelled prompt leaves no headline or date tree in the target", function()
     local p = tmpfile({ "* Inbox", "text" })
-    base_setup()
+    buffer_setup()
     local tb = utils.load_buffer(p)
     local restore = answer({ nil })
     run(capture.capture, { template = "* %^{Title}", target = p, headline = "New" })
@@ -761,7 +765,7 @@ describe("capture buffer", function()
   -- run as a Normal-mode key (LazyVim: the window above).
   it("the Ctrl keys abort and finish from Insert mode, the <prefix> keys only in Normal mode", function()
     local p = tmpfile({ "* Inbox" })
-    base_setup({ capture = { templates = { t = { template = "* TODO %?", target = p, headline = "Inbox" } } } })
+    buffer_setup({ capture = { templates = { t = { template = "* TODO %?", target = p, headline = "Inbox" } } } })
     local up = 0
     vim.keymap.set("n", "<C-k>", function()
       up = up + 1
@@ -798,7 +802,7 @@ describe("capture buffer", function()
   -- for <C-k> and runs <C-c> alone: the prefix map reads the rest itself.
   it("the Ctrl prefix waits for the rest of the key in Insert mode, and gives other keys back", function()
     local p = tmpfile({ "* Inbox" })
-    base_setup({ capture = { templates = { t = { template = "* TODO %?", target = p, headline = "Inbox" } } } })
+    buffer_setup({ capture = { templates = { t = { template = "* TODO %?", target = p, headline = "Inbox" } } } })
     local buf = run(capture.capture, "t")
     vim.cmd("startinsert")
     local prefix = vim.api.nvim_buf_call(buf, function()
@@ -822,7 +826,7 @@ describe("capture buffer", function()
   end)
 
   it("kill unloads an empty or missing target file it loaded, unmodified", function()
-    base_setup()
+    buffer_setup()
     local dir = vim.fn.tempname()
     vim.fn.mkdir(dir, "p")
     local empty, missing = dir .. "/empty.org", dir .. "/missing.org"
@@ -838,7 +842,7 @@ describe("capture buffer", function()
   end)
 
   it("an immediate capture that can't be saved leaves no headline behind", function()
-    base_setup()
+    buffer_setup()
     local dir = vim.fn.tempname()
     vim.fn.mkdir(dir, "p")
     local p = dir .. "/no/such/dir/t.org"
@@ -850,7 +854,7 @@ describe("capture buffer", function()
 
   it("runs on_abort with the target buffer when the capture is killed", function()
     local p = tmpfile({ "* Inbox" })
-    base_setup()
+    buffer_setup()
     local got
     local buf = run(capture.capture, {
       template = "* X",
@@ -867,7 +871,7 @@ describe("capture buffer", function()
 
   it("refuses an empty capture unless allow_empty, which still saves the target", function()
     local p = tmpfile({ "#+title: Head" })
-    base_setup()
+    buffer_setup()
     local buf = run(capture.capture, { type = "plain", template = "", target = p })
     eq(nil, (run(capture.finalize, buf, { jump = false })))
     capture.kill(buf)
@@ -881,7 +885,7 @@ describe("capture buffer", function()
   it("jumps to the stored entry with a count (C-u C-c C-c) and goes to targets", function()
     local p = tmpfile({ "* Inbox", "* Other" })
     local tpl = { template = "* X", target = p, headline = "Other" }
-    base_setup({ capture = { templates = { t = tpl } } })
+    buffer_setup({ capture = { templates = { t = tpl } } })
     local buf = run(capture.capture, "t")
     run(capture.finalize, buf, { jump = true })
     eq(require("org.utils").realpath(p), require("org.utils").realpath(vim.api.nvim_buf_get_name(0)))
@@ -983,6 +987,251 @@ describe("capture buffer", function()
       end,
     })
     eq({ "before:* Hooked", "after" }, calls)
+  end)
+end)
+
+describe("in-place capture (capture.in_place = true)", function()
+  before_each(function()
+    base_setup({ capture = { in_place = true } })
+    vim.cmd("silent! only!")
+  end)
+  after_each(function()
+    for buf in pairs(capture.sessions) do
+      capture.kill(buf)
+    end
+    capture.store_filters.test = nil
+  end)
+
+  --- Screen lines `win` shows for the whole buffer: the hidden ones count 0.
+  local function shown(win)
+    return vim.api.nvim_win_text_height(win, {}).all
+  end
+
+  --- The capture window shows `n` lines: the entry's when this Neovim can
+  --- hide lines in one window (Neovim 0.11.0 can't), else the whole file.
+  local function narrowed(win, n)
+    local all = vim.api.nvim_buf_line_count(vim.api.nvim_win_get_buf(win))
+    eq(capture.can_narrow() and n or all, shown(win))
+  end
+
+  it("inserts the entry into the target at once and shows only it in the capture window", function()
+    local p = tmpfile({ "* Inbox", "** Old", "body", "* Other" })
+    local tb = utils.load_buffer(p)
+    -- another window already shows the target
+    vim.api.nvim_set_current_buf(tb)
+    local other = vim.api.nvim_get_current_win()
+    local buf, win = run(capture.capture, { template = "* TODO %?\nnote", target = p, headline = "Inbox" })
+    eq(tb, buf)
+    ok(capture.sessions[tb].in_place)
+    eq(tb, vim.api.nvim_win_get_buf(win))
+    ok(win ~= other)
+    eq({ "* Inbox", "** Old", "body", "** TODO ", "note", "* Other" }, buf_lines(tb))
+    eq({ 4, 7 }, vim.api.nvim_win_get_cursor(win))
+    -- the capture window shows the two captured lines, the other one all six
+    narrowed(win, 2)
+    eq(6, shown(other))
+    -- the hint has no ":w finishes": :w writes the file
+    ok(not vim.wo[win].winbar:find(":w", 1, true))
+    -- typing more lines keeps them in view
+    vim.api.nvim_buf_set_text(tb, 3, 8, 3, 8, { "Write tests" })
+    vim.api.nvim_buf_set_text(tb, 4, 4, 4, 4, { "", "more" }) -- `o` on the last line
+    vim.api.nvim_exec_autocmds("TextChanged", { buffer = tb })
+    narrowed(win, 3)
+    eq(7, shown(other))
+    if capture.can_narrow() then
+      -- the cursor stays inside the entry, like a narrowed buffer
+      vim.api.nvim_set_current_win(win)
+      vim.api.nvim_win_set_cursor(win, { 1, 0 })
+      vim.api.nvim_exec_autocmds("CursorMoved", { buffer = tb })
+      eq(4, vim.api.nvim_win_get_cursor(win)[1])
+      vim.api.nvim_win_set_cursor(win, { 7, 0 })
+      vim.api.nvim_exec_autocmds("CursorMoved", { buffer = tb })
+      eq(6, vim.api.nvim_win_get_cursor(win)[1])
+    end
+    run(capture.finalize, tb, { jump = false })
+    eq(nil, capture.sessions[tb])
+    eq(false, vim.api.nvim_win_is_valid(win))
+    eq({ "* Inbox", "** Old", "body", "** TODO Write tests", "note", "more", "* Other" }, utils.readfile(p))
+    eq(false, vim.bo[tb].modified)
+    eq(7, shown(other))
+  end)
+
+  it("shows the whole file where Neovim can't hide lines in one window only", function()
+    local can = capture.can_narrow
+    capture.can_narrow = function()
+      return false
+    end
+    local p = tmpfile({ "* Inbox", "** Old", "* Other" })
+    local tb = utils.load_buffer(p)
+    local ok_run, err = pcall(function()
+      local _, win = run(capture.capture, { template = "* New", target = p, headline = "Inbox" })
+      eq(4, shown(win))
+      vim.api.nvim_set_current_win(win)
+      vim.api.nvim_win_set_cursor(win, { 1, 0 })
+      vim.api.nvim_exec_autocmds("CursorMoved", { buffer = tb })
+      eq(1, vim.api.nvim_win_get_cursor(win)[1])
+      run(capture.finalize, tb, { jump = false })
+    end)
+    capture.can_narrow = can
+    assert(ok_run, err)
+    eq({ "* Inbox", "** Old", "** New", "* Other" }, utils.readfile(p))
+  end)
+
+  it("aborts by removing exactly the inserted text, keeping unsaved edits and the modified state", function()
+    local p = tmpfile({ "* Inbox", "text" })
+    local tb = utils.load_buffer(p)
+    -- an unmodified buffer is unmodified again after the abort
+    run(capture.capture, { template = "* Note %?", target = p, headline = "New" })
+    eq({ "* Inbox", "text", "* New", "** Note " }, buf_lines(tb))
+    ok(vim.bo[tb].modified)
+    vim.api.nvim_buf_set_text(tb, 3, 8, 3, 8, { "typed", "more" })
+    capture.kill(tb)
+    eq(nil, capture.sessions[tb])
+    eq({ "* Inbox", "text" }, buf_lines(tb))
+    eq(false, vim.bo[tb].modified)
+    -- unsaved edits made before and during the capture stay
+    vim.api.nvim_buf_set_lines(tb, 1, 2, false, { "unsaved" })
+    run(capture.capture, { template = "* Note", target = p, headline = "Inbox" })
+    vim.api.nvim_buf_set_lines(tb, -1, -1, false, { "* Later" })
+    capture.kill(tb)
+    eq({ "* Inbox", "unsaved", "* Later" }, buf_lines(tb))
+    ok(vim.bo[tb].modified)
+    eq({ "* Inbox", "text" }, utils.readfile(p))
+  end)
+
+  it("aborts after undo, and undo after an abort brings nothing back unasked", function()
+    local p = tmpfile({ "* Inbox" })
+    local tb = utils.load_buffer(p)
+    run(capture.capture, { template = "* Note", target = p, headline = "Inbox" })
+    eq({ "* Inbox", "** Note" }, buf_lines(tb))
+    vim.api.nvim_buf_call(tb, function()
+      vim.cmd("let &l:undolevels = &l:undolevels")
+    end)
+    vim.api.nvim_buf_set_text(tb, 1, 7, 1, 7, { " typed" })
+    vim.api.nvim_buf_call(tb, function()
+      vim.cmd("silent undo")
+    end)
+    eq({ "* Inbox", "** Note" }, buf_lines(tb))
+    capture.kill(tb)
+    eq({ "* Inbox" }, buf_lines(tb))
+    eq(false, vim.bo[tb].modified)
+  end)
+
+  it("loads a target file that is not open and unloads it after an abort or with kill_buffer", function()
+    local p = tmpfile({ "* Inbox" })
+    eq(nil, utils.find_buffer(p))
+    local tb = run(capture.capture, { template = "* Note", target = p, headline = "Inbox" })
+    eq({ "* Inbox", "** Note" }, buf_lines(tb))
+    capture.kill(tb)
+    eq(false, vim.api.nvim_buf_is_valid(tb))
+    eq({ "* Inbox" }, utils.readfile(p))
+    tb = run(capture.capture, { template = "* Kept", target = p, headline = "Inbox", kill_buffer = true })
+    run(capture.finalize, tb, { jump = false })
+    eq(false, vim.api.nvim_buf_is_valid(tb))
+    eq({ "* Inbox", "** Kept" }, utils.readfile(p))
+  end)
+
+  it("places date tree entries, prepended entries, items, checkitems, table lines and plain text", function()
+    local p = tmpfile({ "* A", "- one", "- [ ] c", "| a |", "text", "** Old" })
+    local tb = utils.load_buffer(p)
+    local function captured(tpl, typed)
+      tpl.target, tpl.headline = p, "A"
+      local _, win = run(capture.capture, tpl)
+      -- typed at %? (Normal mode puts the cursor on the last character)
+      local row, col = unpack(vim.api.nvim_win_get_cursor(win))
+      local line = buf_lines(tb)[row]
+      if col == #line - 1 and line:sub(-1) == " " then
+        col = #line
+      end
+      vim.api.nvim_buf_set_text(tb, row - 1, col, row - 1, col, { typed })
+      run(capture.finalize, tb, { jump = false })
+    end
+    captured({ template = "* %?", prepend = true }, "First")
+    captured({ type = "item", template = "- %?" }, "two")
+    captured({ type = "checkitem", template = "- [ ] %?" }, "d")
+    captured({ type = "table-line", template = "| %? |" }, "bbb")
+    captured({ type = "plain", template = "%?" }, "plain")
+    eq(
+      { "* A", "- one", "- [ ] c", "- two", "- [ ] d", "| a   |", "| bbb |", "text", "plain", "** First", "** Old" },
+      utils.readfile(p)
+    )
+    local p2 = tmpfile({ "* Journal" })
+    local tb2 = utils.load_buffer(p2)
+    local _, win = run(capture.capture, { template = "* %?", target = p2, datetree = true }, {
+      date = date.parse("<2026-09-27 Sun>"),
+    })
+    eq({ "* Journal", "* 2026", "** 2026-09 September", "*** 2026-09-27 Sunday", "**** " }, buf_lines(tb2))
+    narrowed(win, 1)
+    capture.kill(tb2)
+    eq({ "* Journal" }, buf_lines(tb2))
+  end)
+
+  it("refiles the captured entry", function()
+    local p = tmpfile({ "* Inbox" })
+    local dest = tmpfile({ "* Projects" })
+    local tb = utils.load_buffer(p)
+    run(capture.capture, { template = "* Moved", target = p, refile_targets = { { files = dest, level = 1 } } })
+    eq({ "* Inbox", "* Moved" }, buf_lines(tb))
+    local restore = answer({ 1 })
+    run(capture.refile, tb)
+    restore()
+    eq(nil, capture.sessions[tb])
+    eq({ "* Inbox" }, file_lines(p))
+    eq({ "* Projects", "** Moved" }, file_lines(dest))
+  end)
+
+  it("gives a second capture into the same file a capture buffer", function()
+    local p = tmpfile({ "* Inbox" })
+    local tb = utils.load_buffer(p)
+    run(capture.capture, { template = "* First", target = p })
+    local second = run(capture.capture, { template = "* Second", target = p })
+    ok(second ~= tb)
+    eq("acwrite", vim.bo[second].buftype)
+    run(capture.finalize, second, { jump = false })
+    run(capture.finalize, tb, { jump = false })
+    eq({ "* Inbox", "* First", "* Second" }, utils.readfile(p))
+  end)
+
+  it("follows the captured text when the target is edited elsewhere meanwhile", function()
+    local p = tmpfile({ "* A", "* Inbox", "** Old" })
+    local tb = utils.load_buffer(p)
+    local _, win = run(capture.capture, { template = "* Captured", target = p, headline = "Inbox" })
+    vim.api.nvim_buf_set_lines(tb, 1, 1, false, { "** under A", "** and more" })
+    vim.api.nvim_exec_autocmds("TextChanged", { buffer = tb })
+    narrowed(win, 1)
+    local _, dline = run(capture.finalize, tb, { jump = false })
+    eq({ "* A", "** under A", "** and more", "* Inbox", "** Old", "** Captured" }, utils.readfile(p))
+    eq(6, dline)
+  end)
+
+  it("stores immediate_finish captures without a window", function()
+    local p = tmpfile({ "* Inbox" })
+    local wins = #vim.api.nvim_list_wins()
+    run(capture.capture, { template = "* Quick", target = p, headline = "Inbox", immediate_finish = true })
+    eq(wins, #vim.api.nvim_list_wins())
+    eq({}, vim.tbl_keys(capture.sessions))
+    eq({ "* Inbox", "** Quick" }, utils.readfile(p))
+  end)
+
+  it("runs the store filters: rewritten text in place, or the entry moved to another target", function()
+    local p = tmpfile({ "* Inbox" })
+    local other = tmpfile({ "* Elsewhere" })
+    local tb = utils.load_buffer(p)
+    capture.store_filters.test = function(_, lines)
+      if lines[1]:find("move", 1, true) then
+        return { "* Moved" }, { target = other, headline = "Elsewhere" }
+      end
+      return { (lines[1]:gsub("x", "y")) }
+    end
+    run(capture.capture, { template = "* xx", target = p, headline = "Inbox" })
+    run(capture.finalize, tb, { jump = false })
+    eq({ "* Inbox", "** yy" }, utils.readfile(p))
+    run(capture.capture, { template = "* move me", target = p, headline = "New" })
+    local dbuf, dline = run(capture.finalize, tb, { jump = false })
+    eq({ "* Inbox", "** yy" }, buf_lines(tb))
+    eq({ "* Elsewhere", "** Moved" }, utils.readfile(other))
+    eq(vim.fn.resolve(other), vim.fn.resolve(vim.api.nvim_buf_get_name(dbuf)))
+    eq(2, dline)
   end)
 end)
 

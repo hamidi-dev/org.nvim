@@ -207,7 +207,7 @@ local associated = {}
 --- started when needed. Returns true when the block has a session.
 function M.src_associate_babel_session(ebuf, bufnr, b)
   local name = b and b.args and session_mod.name(b.args.session)
-  if not name or not session_mod.supported(b.lang, langs.family(b.lang)) then
+  if not name or not session_mod.supported(b.lang, session_mod.family(b.lang)) then
     return false
   end
   associated[ebuf] = { bufnr = bufnr, lang = b.lang, args = b.args, name = name }

@@ -57,6 +57,10 @@ function M.setup(opts)
       end
     end)
   end
+  if (cfg.ui.context or {}).enabled or package.loaded["org.ui.context"] then
+    -- the sticky headline context (ui.context.enabled)
+    require("org.ui.context").setup()
+  end
   if cfg.remote.enabled or package.loaded["org.remote"] then
     -- the session server (remote.enabled), or stop it when turned off
     require("org.remote").setup()

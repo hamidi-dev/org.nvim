@@ -436,7 +436,7 @@ local function cursor_session()
     utils.warn("This block is not using a session (:session)")
     return nil
   end
-  if not session_mod.supported(src.lang, langs.family(src.lang)) then
+  if not session_mod.supported(src.lang, session_mod.family(src.lang)) then
     utils.warn("No session support for " .. tostring(src.lang))
     return nil
   end
@@ -472,7 +472,10 @@ function M.switch_to_session(opts)
           sess.env[v.name] = langs.lua_value(v.value)
         end
       else
-        session_mod.eval(sess, table.concat(langs.var_lines(src.lang, vars, args), "\n"), "output", function() end)
+        local handler = session_mod.handler(src.lang)
+        local code = handler and handler.session.var_code and handler.session.var_code(vars, args)
+          or table.concat(langs.var_lines(src.lang, vars, args), "\n")
+        session_mod.eval(sess, code, "output", function() end)
       end
     end
   end
@@ -520,7 +523,7 @@ function M.kill_session(name)
     return false
   end
   local sname = session_mod.name(args.session)
-  local sess = sname and session_mod.find(langs.family(src.lang), sname)
+  local sess = sname and session_mod.find(session_mod.family(src.lang), sname)
   if not sess then
     utils.notify("No running session for this block")
     return false

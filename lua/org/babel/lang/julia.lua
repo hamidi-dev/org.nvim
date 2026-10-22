@@ -1,8 +1,9 @@
 ---@mod org.babel.lang.julia Julia blocks (ob-julia)
 ---
 --- Table variables are read with CSV.jl and values written back with
---- CSV.jl and DataFrames.jl, like ob-julia. Sessions (ESS) are not
---- supported: blocks run in a new `julia` each time.
+--- CSV.jl and DataFrames.jl, like ob-julia. Without `:session` blocks run
+--- in a new `julia` each time; with one, in a julia REPL that keeps its
+--- globals (Emacs uses an ESS process, see `M.session`).
 
 local ob = require("org.babel.ob")
 local lisp = require("org.babel.lisp")
@@ -110,11 +111,41 @@ M.WRITE_OBJECT = [[begin
     end
 end]]
 
-function M.prepare(body, args, vars, ctx)
+--- The code that evaluates `full` and writes its value to `tmp` (CSV).
+local function value_code(full, tmp, column_names_p)
+  local subs = { "begin " .. full .. " end", tmp, column_names_p and "true" or "false" }
+  local i = 0
+  return (M.WRITE_OBJECT:gsub("%%s", function()
+    i = i + 1
+    return subs[i]
+  end))
+end
+
+--- What a block needs to know about its result: graphics, column names.
+local function result_info(args)
   local rp = ob.rp(args)
   local graphics = rp.graphics and ob.graphical_output_file(args)
   local colnames = not graphics and ob.unq(args.colnames)
   local column_names_p = colnames == "yes" or (colnames and colnames ~= "no" and colnames ~= "nil")
+  return graphics, column_names_p
+end
+
+--- The result of a `:results value` block from the CSV it wrote.
+local function value_result(args, raw, graphics, column_names_p)
+  if graphics then
+    return nil
+  end
+  local result = ob.result_cond(args, raw, function(s)
+    return ob.import(s, "csv")
+  end)
+  if column_names_p and lisp.is_list(result) then
+    result = vim.list_extend({ result[1], "hline" }, vim.list_slice(result, 2))
+  end
+  return result
+end
+
+function M.prepare(body, args, vars, ctx)
+  local graphics, column_names_p = result_info(args)
   local full = M.expand(body, args, vars, { colnames = ctx.colnames })
   local cmd = ctx.opts.cmd or "julia"
   if args.results_spec.collection == "output" then
@@ -126,28 +157,98 @@ function M.prepare(body, args, vars, ctx)
     }
   end
   local tmp = ob.temp()
-  local subs = { "begin " .. full .. " end", tmp, column_names_p and "true" or "false" }
-  local i = 0
-  local code = M.WRITE_OBJECT:gsub("%%s", function()
-    i = i + 1
-    return subs[i]
-  end)
   return {
-    steps = { { cmd = cmd, stdin = code } },
+    steps = { { cmd = cmd, stdin = value_code(full, tmp, column_names_p) } },
     result_file = tmp,
     convert = function(raw)
-      if graphics then
-        return nil
-      end
-      local result = ob.result_cond(args, raw, function(s)
-        return ob.import(s, "csv")
-      end)
-      if column_names_p and lisp.is_list(result) then
-        result = vim.list_extend({ result[1], "hline" }, vim.list_slice(result, 2))
-      end
-      return result
+      return value_result(args, raw, graphics, column_names_p)
     end,
   }
 end
+
+---------------------------------------------------------------------------
+-- Sessions
+---------------------------------------------------------------------------
+
+--- Start-up file of a session REPL (`julia -L`): the request runner, which
+--- shows the block's code, evaluates it in `Main` and prints the markers.
+M.SESSION_SETUP = [[
+function __org_babel_run(id)
+    base = joinpath(ENV["ORG_BABEL_SESSION_DIR"], string(id))
+    if isfile(base * ".echo")
+        print(read(base * ".echo", String), "\n")
+    end
+    print("__ORG_BABEL_BOS__ ", id, "\n")
+    flush(stdout)
+    status = 0
+    try
+        Base.include_string(Main, read(base * ".src", String), "org-babel")
+    catch e
+        status = 1
+        msg = sprint(showerror, e)
+        println(msg)
+        write(base * ".err", msg)
+    end
+    flush(stdout)
+    print("\n__ORG_BABEL_EOE__ ", id, " ", status, "\n")
+    flush(stdout)
+    nothing
+end
+]]
+
+--- `:session` (ob-julia runs in an ESS `*julia*` process): a julia REPL
+--- per session; each block is evaluated in `Main`, so its globals stay.
+--- `:results value` is written to a CSV file like without a session.
+M.session = {
+  family = "julia",
+  repl = {
+    default = "julia",
+    argv = function(cmd, dir, opts)
+      local setup = dir .. "/setup.jl"
+      vim.fn.writefile(vim.split(M.SESSION_SETUP, "\n", { plain = true }), setup)
+      local argv = vim.deepcopy(cmd)
+      if not opts.explicit then
+        vim.list_extend(argv, { "-i", "--banner=no", "--color=no", "--history-file=no" })
+      end
+      vim.list_extend(argv, { "-L", setup })
+      return argv, {}
+    end,
+    line = function(_, id)
+      return string.format("__org_babel_run(%d)", id)
+    end,
+  },
+  command = function(_, o)
+    if o.session_cmd then
+      return o.session_cmd, true
+    end
+    return o.cmd or "julia"
+  end,
+  prepare = function(body, args, vars, ctx)
+    local graphics, column_names_p = result_info(args)
+    local full = M.expand(body, args, vars, { colnames = ctx.colnames })
+    if args.results_spec.collection == "output" then
+      return {
+        code = full,
+        mode = "output",
+        echo = full,
+        convert = function(res)
+          return not graphics and res.output or nil
+        end,
+      }
+    end
+    local tmp = ob.temp()
+    return {
+      code = value_code(full, tmp, column_names_p),
+      mode = "output",
+      echo = full,
+      convert = function()
+        return value_result(args, ob.read(tmp) or "", graphics, column_names_p)
+      end,
+    }
+  end,
+  var_code = function(vars)
+    return table.concat(var_lines(vars), "\n")
+  end,
+}
 
 return M

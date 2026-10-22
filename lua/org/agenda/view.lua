@@ -595,6 +595,23 @@ local function files_for(block)
   return list
 end
 
+--- The files the current view was built from, each once: every block's
+--- files, honoring the restriction (what org-agenda-prepare-buffers
+--- reads `#+TAGS:` from for org-tag-alist-for-agenda).
+---@return org.File[]
+local function view_files()
+  local out, seen = {}, {}
+  for _, block in ipairs(S.view and S.view.blocks or {}) do
+    for _, f in ipairs(files_for(block)) do
+      if not seen[f] then
+        seen[f] = true
+        out[#out + 1] = f
+      end
+    end
+  end
+  return out
+end
+
 --- TODO keywords of the agenda files, for `N r` (org-todo-keywords-for-agenda:
 --- collected file by file, each new keyword pushed to the front).
 local function todo_names()
@@ -846,6 +863,7 @@ shared.set_restrict = set_restrict
 shared.states = states
 shared.todo_names = todo_names
 shared.use = use
+shared.view_files = view_files
 
 require("org.agenda.view.window")
 require("org.agenda.view.show")

@@ -428,6 +428,11 @@
 ---URL prefix of `doi:` links (`org-link-doi-server-url`).
 ---(default: `"https://doi.org/"`)
 ---@field doi_server_url? string
+---How `docview:FILE::PAGE` links open a document at a page: a command with
+---`%s` (file) and `%p` (page), a function, `false` (no page), or `nil` (the
+---first installed of zathura, okular, evince, qpdfview, mupdf, SumatraPDF).
+---(default: `nil`)
+---@field docview_command? string|false|fun(file: string, page: integer)
 ---Functions tried first on file search strings; return true when handled
 ---(`org-execute-file-search-functions`). (default: `{}`)
 ---@field search_functions? (fun(search: string): boolean)[]
@@ -644,7 +649,7 @@
 ---`lua` runs inside Neovim unless `cmd` is another interpreter
 ---(`org-babel-lua-command`). For the ports of ob-LANG.el it is that
 ---language's command (java, julia, groovy, ocaml, maxima, gnuplot, ghci,
----`sbcl --script`, the gfortran compiler, dot, sed, sass, `octave -q`,
+---`sbcl --script`, the gfortran compiler, dot, sed, awk, sass, `octave -q`,
 ---`matlab -nosplash`, gforth, ...).
 ---@field cmd? string|string[]
 ---Extension of the temp file, e.g. `"py"`. Defaults to a built-in
@@ -668,8 +673,9 @@
 ---lua: separator of several returned values
 ---(`org-babel-lua-multiple-values-separator`). (default: `", "`)
 ---@field multiple_values_separator? string
----python: the command of sessions, used as it is, e.g. `"ipython -i"`
----(`org-babel-python-command-session`). nil: `cmd -i`.
+---python, julia, ocaml: the command of sessions, used as it is, e.g.
+---`"ipython -i"` (`org-babel-python-command-session`). nil: `cmd -i`
+---(python), `cmd` with the REPL's own options (julia, ocaml).
 ---@field session_cmd? string
 ---java (javac), haskell (ghc), csharp (dotnet): the compiler
 ---(`org-babel-*-compiler`).
@@ -686,7 +692,8 @@
 ---`babashka_command`, `cli_command`, `nbb_command` (clojurescript
 ---`backend`); csharp `default_target_framework`,
 ---`additional_project_flags`, `generate_compile_command`,
----`generate_restore_command`; lisp `dir_fmt`; scheme `impl`, `commands`;
+---`generate_restore_command`; lisp `dir_fmt`; scheme `impl`, `commands`,
+---`session_commands`;
 ---haskell `lhs2tex`; processing `js_filename`; screen `location`.
 ---@field [string] any
 
@@ -822,7 +829,7 @@
 ---Languages that can be evaluated, merged key by key with the defaults
 ---(sh, shell, bash, zsh, fish, python, python3, lua, js, javascript,
 ---typescript, ts, ruby, perl, php, r, R, go, rust, sqlite, sql, C, C++,
----cpp, D, awk, and the ob-LANG ports: plantuml, ditaa, gnuplot, latex,
+---cpp, D, and the ob-LANG ports: awk, css, makefile, org, plantuml, ditaa, gnuplot, latex,
 ---lilypond, java, csharp, haskell, clojure, clojurescript, lisp, scheme,
 ---fortran, processing, screen, julia, groovy, ocaml, maxima, calc, dot,
 ---sed, sass, octave, matlab, forth). Emacs

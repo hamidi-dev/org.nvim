@@ -54,11 +54,11 @@ local warned_session = {}
 local function block_session(lang, args)
   local name = session_mod.name(args.session)
   local handler = require("org.babel.ob").get(lang)
-  if handler then
+  if handler and not handler.session then
     -- ob-LANG ports read :session themselves (ob-screen)
     return nil
   end
-  if name and not session_mod.supported(lang, langs.family(lang)) then
+  if name and not session_mod.supported(lang, session_mod.family(lang)) then
     if not warned_session[lang] then
       warned_session[lang] = true
       utils.warn(string.format("babel: %s has no session support; ignoring :session", lang))
@@ -94,14 +94,19 @@ end
 
 --- The session of a block, started when needed.
 local function get_session(bufnr, lang, args, name)
-  local fam = langs.family(lang)
+  local fam = session_mod.family(lang)
   ---@type string[]?
   local cmd = {}
   local explicit = fam == "ruby" and args.ruby ~= nil
   -- org-babel-python-command-session: the REPL command, used as it is
   local py_session = fam == "python" and not args.python and langs.lang_opt(lang, "session_cmd")
+  local handler = session_mod.handler(lang)
   if fam ~= "lua" then
-    if py_session then
+    if handler then
+      -- a port of ob-LANG.el names its REPL command (explicit: used as it is)
+      local c, ex = handler.session.command(args, require("org.babel.ob").opts(lang) or {})
+      cmd, explicit = split_cmd(c), ex == true
+    elseif py_session then
       cmd, explicit = split_cmd(py_session), true
     else
       cmd = lang_cmd(lang, args)
@@ -120,6 +125,7 @@ local function get_session(bufnr, lang, args, name)
     cmd = cmd,
     cwd = block_cwd(bufnr, args),
     explicit = explicit,
+    args = args,
   })
 end
 
@@ -234,7 +240,46 @@ local function lua_result(res, args)
   return v
 end
 
-local function run_in_session(bufnr, lang, body, args, vars, name, done, sync, graphics_file, job)
+--- A block of a port of ob-LANG.el in its session: the handler's
+--- `session.prepare` gives the code to send and how to read the answer.
+local function run_handler_session(handler, sess, lang, body, args, vars, done, sync, job, colnames)
+  local ob = require("org.babel.ob")
+  local ctx = { lang = lang, opts = ob.opts(lang) or {}, colnames = colnames }
+  local ok, spec = pcall(handler.session.prepare, body, args, vars, ctx)
+  if not ok then
+    utils.error(tostring(spec))
+    return done({ error = tostring(spec), abort = true })
+  end
+  local function convert(sres)
+    if sres.error then
+      M.error_notify(nil, sres.error)
+      if spec.mode == "value" then
+        return { error = sres.error }
+      end
+    end
+    local cok, res = pcall(spec.convert, sres, sess)
+    if not cok then
+      utils.error(tostring(res))
+      return { error = tostring(res), abort = true }
+    end
+    return { result = res, error = sres.error }
+  end
+  local eopts =
+    { timeout = require("org.config").opts.babel.timeout, echo_text = spec.echo, params = spec.params, args = args }
+  if sync then
+    return done(convert(session_mod.eval_sync(sess, spec.code, spec.mode, eopts)))
+  end
+  local req = session_mod.eval(sess, spec.code, spec.mode, function(sres)
+    done(convert(sres))
+  end, eopts)
+  if req then
+    jobs.set_kill(job, function()
+      session_mod.cancel(sess, req)
+    end)
+  end
+end
+
+local function run_in_session(bufnr, lang, body, args, vars, name, done, sync, graphics_file, job, colnames)
   local ok, sess = pcall(get_session, bufnr, lang, args, name)
   if not ok then
     utils.error("babel: " .. tostring(sess))
@@ -252,6 +297,10 @@ local function run_in_session(bufnr, lang, body, args, vars, name, done, sync, g
       return done({ error = res.error, result = args.results_spec.collection == "output" and res.output or nil })
     end
     return done({ result = lua_result(res, args) })
+  end
+  local handler = session_mod.handler(lang)
+  if handler then
+    return run_handler_session(handler, sess, lang, body, args, vars, done, sync, job, colnames)
   end
   local fam = langs.family(lang)
   local is_shell = fam == "shell" or fam == "fish"
@@ -419,7 +468,7 @@ function M.run(bufnr, lang, body, args, vars, cb, opts)
   local fam = langs.family(lang)
   local sname = block_session(lang, args)
   if sname then
-    run_in_session(bufnr, lang, body, args, vars, sname, done, sync, opts.graphics_file, opts.job)
+    run_in_session(bufnr, lang, body, args, vars, sname, done, sync, opts.graphics_file, opts.job, opts.colnames)
     return result
   end
   local cwd = block_cwd(bufnr, args)
