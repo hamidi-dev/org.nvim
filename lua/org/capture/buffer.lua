@@ -244,9 +244,15 @@ end
 ---------------------------------------------------------------------------
 
 --- Whether this Neovim can hide lines in one window only: conceal_lines
---- marks in a namespace scoped to that window.
-local function can_narrow()
-  return vim.api.nvim__ns_set ~= nil and require("org.fold").conceal_supported
+--- marks in a namespace scoped to that window. Neovim 0.11 to 0.12.2 have
+--- the API but draw some of those lines hidden in the other windows on the
+--- buffer too (a drawing bug no API call reports, nvim_win_text_height
+--- included, so it is told by the version).
+--- Without it the capture window shows the whole file, as with
+--- `unnarrowed`.
+---@return boolean
+function M.can_narrow()
+  return vim.api.nvim__ns_set ~= nil and require("org.fold").conceal_supported and vim.fn.has("nvim-0.12.3") == 1
 end
 
 --- Show only the captured text in the capture window, like Emacs's capture
@@ -257,7 +263,7 @@ end
 --- is kept inside the text. `widen_window` ends it.
 local function narrow_window(s)
   local bufnr, win = s.bufnr, s.win
-  if not can_narrow() then
+  if not M.can_narrow() then
     return
   end
   local ns = vim.api.nvim_create_namespace("org.capture.narrow." .. win)

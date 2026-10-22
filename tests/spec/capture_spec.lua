@@ -1007,6 +1007,13 @@ describe("in-place capture (capture.in_place = true)", function()
     return vim.api.nvim_win_text_height(win, {}).all
   end
 
+  --- The capture window shows `n` lines: the entry's when this Neovim can
+  --- hide lines in one window (Neovim 0.11.0 can't), else the whole file.
+  local function narrowed(win, n)
+    local all = vim.api.nvim_buf_line_count(vim.api.nvim_win_get_buf(win))
+    eq(capture.can_narrow() and n or all, shown(win))
+  end
+
   it("inserts the entry into the target at once and shows only it in the capture window", function()
     local p = tmpfile({ "* Inbox", "** Old", "body", "* Other" })
     local tb = utils.load_buffer(p)
@@ -1021,7 +1028,7 @@ describe("in-place capture (capture.in_place = true)", function()
     eq({ "* Inbox", "** Old", "body", "** TODO ", "note", "* Other" }, buf_lines(tb))
     eq({ 4, 7 }, vim.api.nvim_win_get_cursor(win))
     -- the capture window shows the two captured lines, the other one all six
-    eq(2, shown(win))
+    narrowed(win, 2)
     eq(6, shown(other))
     -- the hint has no ":w finishes": :w writes the file
     ok(not vim.wo[win].winbar:find(":w", 1, true))
@@ -1029,21 +1036,45 @@ describe("in-place capture (capture.in_place = true)", function()
     vim.api.nvim_buf_set_text(tb, 3, 8, 3, 8, { "Write tests" })
     vim.api.nvim_buf_set_text(tb, 4, 4, 4, 4, { "", "more" }) -- `o` on the last line
     vim.api.nvim_exec_autocmds("TextChanged", { buffer = tb })
-    eq(3, shown(win))
-    -- the cursor stays inside the entry, like a narrowed buffer
-    vim.api.nvim_set_current_win(win)
-    vim.api.nvim_win_set_cursor(win, { 1, 0 })
-    vim.api.nvim_exec_autocmds("CursorMoved", { buffer = tb })
-    eq(4, vim.api.nvim_win_get_cursor(win)[1])
-    vim.api.nvim_win_set_cursor(win, { 7, 0 })
-    vim.api.nvim_exec_autocmds("CursorMoved", { buffer = tb })
-    eq(6, vim.api.nvim_win_get_cursor(win)[1])
+    narrowed(win, 3)
+    eq(7, shown(other))
+    if capture.can_narrow() then
+      -- the cursor stays inside the entry, like a narrowed buffer
+      vim.api.nvim_set_current_win(win)
+      vim.api.nvim_win_set_cursor(win, { 1, 0 })
+      vim.api.nvim_exec_autocmds("CursorMoved", { buffer = tb })
+      eq(4, vim.api.nvim_win_get_cursor(win)[1])
+      vim.api.nvim_win_set_cursor(win, { 7, 0 })
+      vim.api.nvim_exec_autocmds("CursorMoved", { buffer = tb })
+      eq(6, vim.api.nvim_win_get_cursor(win)[1])
+    end
     run(capture.finalize, tb, { jump = false })
     eq(nil, capture.sessions[tb])
     eq(false, vim.api.nvim_win_is_valid(win))
     eq({ "* Inbox", "** Old", "body", "** TODO Write tests", "note", "more", "* Other" }, utils.readfile(p))
     eq(false, vim.bo[tb].modified)
     eq(7, shown(other))
+  end)
+
+  it("shows the whole file where Neovim can't hide lines in one window only", function()
+    local can = capture.can_narrow
+    capture.can_narrow = function()
+      return false
+    end
+    local p = tmpfile({ "* Inbox", "** Old", "* Other" })
+    local tb = utils.load_buffer(p)
+    local ok_run, err = pcall(function()
+      local _, win = run(capture.capture, { template = "* New", target = p, headline = "Inbox" })
+      eq(4, shown(win))
+      vim.api.nvim_set_current_win(win)
+      vim.api.nvim_win_set_cursor(win, { 1, 0 })
+      vim.api.nvim_exec_autocmds("CursorMoved", { buffer = tb })
+      eq(1, vim.api.nvim_win_get_cursor(win)[1])
+      run(capture.finalize, tb, { jump = false })
+    end)
+    capture.can_narrow = can
+    assert(ok_run, err)
+    eq({ "* Inbox", "** Old", "** New", "* Other" }, utils.readfile(p))
   end)
 
   it("aborts by removing exactly the inserted text, keeping unsaved edits and the modified state", function()
@@ -1130,7 +1161,7 @@ describe("in-place capture (capture.in_place = true)", function()
       date = date.parse("<2026-09-27 Sun>"),
     })
     eq({ "* Journal", "* 2026", "** 2026-09 September", "*** 2026-09-27 Sunday", "**** " }, buf_lines(tb2))
-    eq(1, shown(win))
+    narrowed(win, 1)
     capture.kill(tb2)
     eq({ "* Journal" }, buf_lines(tb2))
   end)
@@ -1167,7 +1198,7 @@ describe("in-place capture (capture.in_place = true)", function()
     local _, win = run(capture.capture, { template = "* Captured", target = p, headline = "Inbox" })
     vim.api.nvim_buf_set_lines(tb, 1, 1, false, { "** under A", "** and more" })
     vim.api.nvim_exec_autocmds("TextChanged", { buffer = tb })
-    eq(1, shown(win))
+    narrowed(win, 1)
     local _, dline = run(capture.finalize, tb, { jump = false })
     eq({ "* A", "** under A", "** and more", "* Inbox", "** Old", "** Captured" }, utils.readfile(p))
     eq(6, dline)

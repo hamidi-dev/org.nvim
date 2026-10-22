@@ -3331,9 +3331,10 @@ writes the file, with the entry in it. All template types, date trees,
 `prepend`, `kill_buffer` and `clock_in` work as with a capture buffer;
 `immediate_finish` opens no window either way. A second capture into a
 file that a capture is editing in place gets a separate capture buffer.
-Hiding the rest of the file needs `conceal_lines` and window-scoped
-namespaces (Neovim 0.11+); without them the window shows the whole file,
-as with `unnarrowed`. Closing the capture window ends the capture and
+Hiding the rest of the file needs `conceal_lines` in window-scoped
+namespaces, which Neovim 0.12.3+ draws in that window only (older
+versions hide some lines in the other windows on the file too); there the
+capture window shows the whole file, as with `unnarrowed`. Closing the capture window ends the capture and
 leaves the text in the (unsaved) buffer.
 
                                                     *org-capture-unnarrowed*

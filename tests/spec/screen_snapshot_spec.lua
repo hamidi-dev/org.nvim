@@ -397,6 +397,10 @@ describe("screen snapshot", function()
 
   it("an in-place capture: the capture window shows only the new entry, the file all of it", function()
     new({ capture = { in_place = true } }, 72, 16, { year = 2026, month = 10, day = 21, hour = 9, min = 30 })
+    if not screen:lua([[return require("org.capture").can_narrow()]]) then
+      -- the capture window shows the whole file there (capture_spec.lua)
+      error({ skip = "this Neovim can't hide lines in one window only" }, 0)
+    end
     local path = screen:org({ "* Inbox", "** TODO Old task", "Notes about it.", "* Projects", "** Garden" })
     screen:lua(
       [[
