@@ -374,7 +374,7 @@ by topic, with each command's Vim and Emacs keys on one row.
 
 ## 📊 Parity with Emacs Org
 
-**98.5% of Org 9.8.12's commands, options, Babel languages, link types and
+**98.6% of Org 9.8.12's commands, options, Babel languages, link types and
 export transcoders behave the same in org.nvim** (strict count, October
 2026). Emacs itself lists every one of them in Org 9.8.12; each is classified in
 [`docs/parity/inventory.tsv`](docs/parity/inventory.tsv) and scored by
@@ -382,8 +382,8 @@ export transcoders behave the same in org.nvim** (strict count, October
 
 | Count | Parity | What it counts |
 | --- | --- | --- |
-| **Strict** | `▰▰▰▰▰▰▰▰▰▰` **98.5%** | All 2,297 items with a user-visible effect, including the 31 that need Emacs itself (Gnus, BBDB, eshell, TRAMP, CDLaTeX...) |
-| Without Emacs-only | `▰▰▰▰▰▰▰▰▰▰` 99.8% | The 2,266 of those that can exist outside Emacs |
+| **Strict** | `▰▰▰▰▰▰▰▰▰▰` **98.6%** | All 2,297 items with a user-visible effect, including the 31 that need Emacs itself (Gnus, BBDB, eshell, TRAMP, CDLaTeX...) |
+| Without Emacs-only | `▰▰▰▰▰▰▰▰▰▰` 99.9% | The 2,266 of those that can exist outside Emacs |
 
 By area (strict):
 
@@ -399,7 +399,7 @@ By area (strict):
 | 🏛️ Column view | `▰▰▰▰▰▰▰▰▰▰` 100% | — |
 | 🔗 Links | `▰▰▰▰▰▰▰▰▱▱` 81.6% | Links to Emacs applications (Gnus, BBDB, MH-E, rmail) need Emacs |
 | 📎 Attachments, IDs, footnotes, lint, protocol, crypt | `▰▰▰▰▰▰▰▰▰▰` 100% | — |
-| 🧪 Babel and source editing | `▰▰▰▰▰▰▰▰▰▰` 96.9% | `css`, `makefile` and `org` blocks don't run yet and `awk` ignores `:var`/`:stdin`; Common Lisp runs in `sbcl`, not SLIME/SLY; TRAMP, eshell and Clojure's CIDER need Emacs |
+| 🧪 Babel and source editing | `▰▰▰▰▰▰▰▰▰▰` 98.5% | Common Lisp runs in `sbcl`, not SLIME/SLY; TRAMP, eshell and Clojure's CIDER need Emacs |
 | 📤 Export and publishing | `▰▰▰▰▰▰▰▰▰▰` 99.9% | BBDB anniversaries in iCalendar need Emacs |
 | 📚 Citations | `▰▰▰▰▰▰▰▰▰▰` 100% | — |
 | 📰 Feeds and MobileOrg | `▰▰▰▰▰▰▰▰▰▰` 100% | — |
