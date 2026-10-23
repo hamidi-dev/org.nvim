@@ -132,6 +132,108 @@ describe("fold: cycling", function()
   end)
 end)
 
+describe("fold: mapped Tab with short child folds", function()
+  with_config({ cycle_separator_lines = 1 })
+  local saved_foldminlines
+  before_each(function()
+    saved_foldminlines = vim.wo.foldminlines
+    vim.wo.foldminlines = 1
+  end)
+  after_each(function()
+    vim.wo.foldminlines = saved_foldminlines
+  end)
+
+  local function tab()
+    vim.api.nvim_feedkeys(vim.keycode("<Tab>"), "xt", false)
+  end
+
+  local function shown()
+    local out = {}
+    for l = 1, vim.fn.line("$") do
+      if fold.line_visible(l) then
+        out[#out + 1] = vim.fn.getline(l)
+      end
+    end
+    return out
+  end
+
+  local cases = {
+    {
+      name = "a final child followed only by an EOF blank",
+      lines = { "* Unsortiert", "** A", "body", "** B", "" },
+      children = { "* Unsortiert", "** A", "** B", "" },
+      folded = { "* Unsortiert", "" },
+      child_closed = 2,
+    },
+    {
+      name = "a final child followed only by whitespace at EOF",
+      lines = { "* Unsortiert", "** A", "body", "** B", "", "  " },
+      children = { "* Unsortiert", "** A", "** B", "", "  " },
+      folded = { "* Unsortiert", "", "  " },
+      child_closed = 2,
+    },
+    {
+      name = "the cursor inside a closed parent with an empty final child",
+      lines = { "* Unsortiert", "** A", "body", "** B", "" },
+      cursor = 4,
+      children = { "* Unsortiert", "** A", "** B", "" },
+      folded = { "* Unsortiert", "" },
+      child_closed = 2,
+    },
+    {
+      name = "a child followed only by a separator blank",
+      lines = { "* Unsortiert", "** A", "body", "** B", "", "** C" },
+      children = { "* Unsortiert", "** A", "** B", "", "** C" },
+      folded = { "* Unsortiert" },
+      child_closed = 2,
+    },
+    {
+      name = "child folds no longer than foldminlines",
+      lines = { "* Unsortiert", "** A", "body", "** B", "short body", "" },
+      foldminlines = 2,
+      children = { "* Unsortiert", "** A", "body", "** B", "short body", "" },
+      folded = { "* Unsortiert", "" },
+      child_closed = -1,
+    },
+  }
+
+  for _, case in ipairs(cases) do
+    it("cycles FOLDED -> CHILDREN -> SUBTREE -> FOLDED with " .. case.name, function()
+      local buf = org_buffer(case.lines, { 1, 0 })
+      vim.wo.foldminlines = case.foldminlines or 1
+      fold.setup_buffer(buf)
+      fold.overview()
+      eq(1, vim.fn.foldclosed(1))
+      eq(case.folded, shown())
+      vim.api.nvim_win_set_cursor(0, { case.cursor or 1, 0 })
+      eq(1, vim.fn.foldclosed(case.cursor or 1))
+
+      -- Repeat the whole cycle: a bogus CHILDREN state must not leave the
+      -- parent closed and trap every subsequent mapped Tab in that state.
+      for _ = 1, 2 do
+        tab()
+        eq(-1, vim.fn.foldclosed(1), "CHILDREN keeps the parent open")
+        eq({ 1, 0 }, vim.api.nvim_win_get_cursor(0))
+        eq("children", vim.w.org_last_cycle.status)
+        eq(case.child_closed, vim.fn.foldclosed(2))
+        eq(case.children, shown())
+
+        tab()
+        eq("subtree", vim.w.org_last_cycle.status)
+        eq(-1, vim.fn.foldclosed(1))
+        eq(-1, vim.fn.foldclosed(2))
+        eq(case.lines, shown())
+
+        tab()
+        eq("folded", vim.w.org_last_cycle.status)
+        eq(1, vim.fn.foldclosed(1))
+        eq(case.folded, shown())
+      end
+      eq(case.lines, buf_lines(buf))
+    end)
+  end
+end)
+
 -- org-cycle-include-plain-lists 'integrate (Emacs 9.8.10: CHILDREN shows
 -- the top-level items folded, then SUBTREE, then FOLDED; with `t` a
 -- headline with only a list goes FOLDED -> SUBTREE (NO CHILDREN))
