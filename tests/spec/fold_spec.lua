@@ -57,9 +57,28 @@ describe("fold: cycling", function()
     vim.api.nvim_win_set_cursor(0, { 4, 0 })
     eq(1, vim.fn.foldclosed(4))
     fold.cycle()
-    eq({ 1, 0 }, vim.api.nvim_win_get_cursor(0))
+    -- Emacs 9.8.10: point ends up at the end of the visible heading
+    eq({ 1, 2 }, vim.api.nvim_win_get_cursor(0))
     eq(-1, vim.fn.foldclosed(1))
     eq(2, vim.fn.foldclosed(2))
+  end)
+
+  -- Emacs leaves point after a link that ends the heading, so
+  -- org-tab-follows-link doesn't follow it
+  it("cycles instead of following a link at the end of the visible heading", function()
+    local links = require("org.config").opts.links
+    local saved = links.tab_follows_link
+    links.tab_follows_link = true
+    local buf = org_buffer({ "* See [[B]]", "** sub", "body", "* B" }, { 1, 0 })
+    fold.setup_buffer(buf)
+    fold.overview()
+    vim.api.nvim_win_set_cursor(0, { 3, 0 })
+    eq(1, vim.fn.foldclosed(3))
+    local ok_, err = pcall(fold.cycle)
+    links.tab_follows_link = saved
+    assert(ok_, err)
+    eq({ 1, 10 }, vim.api.nvim_win_get_cursor(0))
+    eq(-1, vim.fn.foldclosed(1))
   end)
 
   -- Emacs org-cycle-emulate-tab: TAB in body text indents the line, or
@@ -213,7 +232,8 @@ describe("fold: mapped Tab with short child folds", function()
       for _ = 1, 2 do
         tab()
         eq(-1, vim.fn.foldclosed(1), "CHILDREN keeps the parent open")
-        eq({ 1, 0 }, vim.api.nvim_win_get_cursor(0))
+        -- from inside the fold the cursor goes to the end of the heading
+        eq({ 1, case.cursor and #case.lines[1] - 1 or 0 }, vim.api.nvim_win_get_cursor(0))
         eq("children", vim.w.org_last_cycle.status)
         eq(case.child_closed, vim.fn.foldclosed(2))
         eq(case.children, shown())
